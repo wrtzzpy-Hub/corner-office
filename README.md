@@ -9,7 +9,7 @@ Play it online at **https://wrtzzpy-hub.github.io/corner-office/**, or download 
 - **Career ladder:** Intern → Analyst → Associate → Senior Associate → Manager → Senior Manager → Director → Partner. Each engagement's score becomes XP.
 - **Engagements:** every engagement is a new client, with its own company, industry, executive, logo wall and office colour scheme. Tasks are spread around the building: a meeting room, a finance floor, an executive suite with skyline views, a lobby and a stockroom.
 - **Two modes:**
-  - *Play for fun*: a mode simple enough for kids. 18 everyday question types (giving change, profit, sale prices, saving up, needs and wants, checking a receipt, good customer service), written in plain words with small numbers. Answers are multiple choice with two tries and a free hint, and jobs are 4 to 7 tasks long.
+  - *Play for fun*: a mode simple enough for kids. 18 everyday question types (giving change, profit, sale prices, saving up, needs and wants, checking a receipt, good customer service), written in plain words with small numbers. Answers are multiple choice with two tries and a free hint. Questions get gently harder in three levels as you climb (Easy, Medium, Tricky: bigger numbers, two-step questions and trickier wrong answers), and jobs grow from 4 to 7 tasks.
   - *Student mode*: pick a major (Accounting, Finance, Marketing, Management or Economics) and a university year (1 to 4). About 70% of tasks come from the chosen major, answers are typed, and difficulty scales with year and rank.
 - **Learning from mistakes:** a wrong answer shows your answer next to the correct one, a numbered step-by-step solution, the key idea to remember, and a button to practise a similar question with fresh numbers.
 - **Guidance:** an on-screen arrow, a glowing path on the floor, a light beam over the destination and a minimap route lead the player to the nearest open task. A first-day coach walks new players through the controls.
@@ -18,7 +18,7 @@ Play it online at **https://wrtzzpy-hub.github.io/corner-office/**, or download 
 
 ## How it works
 
-- **Procedural task generation:** 43 task templates across five business disciplines, each with up to four difficulty tiers. Every task is generated from a seeded random source, so numbers, names and correct answers change every time while staying internally consistent. A test harness generated 43,800 student variations and 54,000 Play for fun variations and checked every answer.
+- **Procedural task generation:** 43 task templates across five business disciplines, each with up to four difficulty tiers. Every task is generated from a seeded random source, so numbers, names and correct answers change every time while staying internally consistent. A test harness generated 43,800 student variations and 81,000 Play for fun variations and checked every answer.
 - **Custom 3D engine:** a hand-written WebGL renderer with no 3D library. All textures (marble, wood, carpet, a Dubai skyline, live market screens and a scrolling stock ticker) are painted procedurally on canvas at load time. It also handles smooth-shaded rounded shapes, transparent glass, lighting with ceiling light pools and floor reflections, collision, and line-of-sight checks for labels.
 - **Navigation:** a door-graph pathfinder with collision checks routes the guidance path around furniture and through doorways.
 - **Procedural audio:** footsteps that change with the floor surface, stamps, chimes and the background music are all synthesised live with the Web Audio API.

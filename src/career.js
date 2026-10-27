@@ -17,7 +17,8 @@ const isStudent = () => save.mode === "student";
 /* Play for fun uses a beginner pool at the easiest tier; numeric answers become multiple choice with a tip on every task. */
 const CASUAL_IDS = new Set(["acc_classify", "acc_cutoff", "acc_count", "acc_materiality", "acc_baddebt", "acc_depr", "acc_prepaid", "fin_tvm", "fin_ratio", "fin_breakeven", "mkt_funnel", "mkt_classify", "mkt_campaign", "mkt_share", "mkt_pricing", "mgt_swot", "mgt_theory", "mgt_roster", "mgt_ops", "mgt_lead", "mgt_count", "eco_cpi", "eco_gdp", "eco_classify"]);
 function baseTier() { const rk = rankOf(career().xp); return isStudent() ? Math.min(4, YEAR_BASE[save.year] + Math.floor((rk + (save.year === 4 ? 2 : 0)) / 3)) : 1; }
-const ptsFor = tier => isStudent() ? 100 + 25 * (tier - 1) : 100;
+const ptsFor = tier => 100 + 25 * (tier - 1);
+const funTier = rk => rk <= 2 ? 1 : rk <= 4 ? 2 : 3;
 const engLength = rk => isStudent() ? Math.min(12, 6 + Math.floor(rk * .85)) : 4 + Math.floor(rk * .5);
 const bossTitle = () => { const rk = rankOf(career().xp); return rk < 4 ? "Manager" : rk < 6 ? "Director" : "Managing Partner"; };
 
@@ -72,7 +73,7 @@ function newEngagement(daily) {
       const cand = FUN.filter(t => !used.has(t.id) && !(t.kind === "count" && countUsed)); if (!cand.length) break;
       const lastKind = list.length ? TPL[list[list.length - 1].tpl].kind : null, fresh = cand.filter(t => !recent.has(t.id) && t.kind !== lastKind);
       const t = h.pick(fresh.length ? fresh : cand); used.add(t.id); if (t.kind === "count") countUsed = true; majCount[t.major] = (majCount[t.major] || 0) + 1;
-      list.push({ tpl: t.id, tier: 1 });
+      const ft = funTier(rk); list.push({ tpl: t.id, tier: Math.max(1, ft - (r() < .25 ? 1 : 0)) });
     }
   } else for (let i = 0; i < n; i++) {
     const major = r() < .7 ? save.major : h.pick(MAJORS.filter(m => m !== save.major));

@@ -92,7 +92,7 @@ const views = {
         <div class="bigbar"><i style="width:${pr.pct}%"></i></div>
         <p style="margin:0 0 12px;color:var(--ink-dim)">${pr.need ? `${N(pr.need)} XP to <b>${RANKS[pr.rk + 1]}</b>` : "You made Partner. Keep playing to raise your average."} · ${N(cr.xp)} XP total</p>
         <div class="facts"><div class="fact"><div class="v">${cr.eng}</div><div class="k">${isStudent() ? "Engagements" : "Jobs done"}</div></div><div class="fact"><div class="v">${cr.eng ? Math.round(cr.sumPct / cr.eng) + "%" : "–"}</div><div class="k">Average score</div></div><div class="fact"><div class="v">${cr.eng ? cr.best + "%" : "–"}</div><div class="k">Best</div></div></div>
-        <p style="margin:0;color:var(--ink-dim);font-size:14px">Next ${JOB()}: ${engLength(pr.rk)} tasks${isStudent() && baseTier() >= 2 ? " plus a final recommendation" : ""} · ${isStudent() ? `difficulty ${"●".repeat(baseTier())}${"○".repeat(4 - baseTier())}` : "easy, with tips"}</p>
+        <p style="margin:0;color:var(--ink-dim);font-size:14px">Next ${JOB()}: ${engLength(pr.rk)} tasks${isStudent() && baseTier() >= 2 ? " plus a final recommendation" : ""} · ${isStudent() ? `difficulty ${"●".repeat(baseTier())}${"○".repeat(4 - baseTier())}` : `questions: ${FUN_LEVEL[funTier(pr.rk)].toLowerCase()}`}</p>
       </article>
       <div class="menu">
         ${cur ? `<button class="btn red" data-act="resume"><span>Resume: ${esc(cur.client.name)}</span><small>${Object.values(cur.res).filter(r => r.status === "done").length}/${cur.tasks.length} done</small></button>` : ""}
@@ -140,7 +140,7 @@ const views = {
     const showTip = !done && (state.hintOpen || res.hint);
     return `<section class="fadein"><div class="ov-top"><div class="row-btns"><button class="btn ghost" data-act="${prac ? "endpractice" : "close"}">← ${prac ? "Back" : "Back to the office"}</button>${!done ? `<button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}">Calculator</button>` : ""}</div><span class="hint2">${esc(tk.key === "cap" ? "Final recommendation" : prac ? "Practice round · no points" : "At " + STATIONS[tk.st].place)}</span></div>
       <article class="paper">
-        <div class="chips-row"><span class="chipx k">${kindName(tk)}</span><span class="chipx">${esc(tk.T.major)}</span>${isStudent() ? `<span class="chipx">${"●".repeat(tk.tier)}${"○".repeat(4 - tk.tier)}</span>` : `<span class="chipx">Easy</span>`}<span class="chipx ${prac ? "prac" : ""}">${prac ? "Practice" : ptsFor(tk.tier) + " pts"}</span></div>
+        <div class="chips-row"><span class="chipx k">${kindName(tk)}</span><span class="chipx">${esc(tk.T.major)}</span>${isStudent() ? `<span class="chipx">${"●".repeat(tk.tier)}${"○".repeat(4 - tk.tier)}</span>` : `<span class="chipx">${FUN_LEVEL[tk.tier] || "Easy"}</span>`}<span class="chipx ${prac ? "prac" : ""}">${prac ? "Practice" : ptsFor(tk.tier) + " pts"}</span></div>
         <h3 class="h2" style="font-size:32px">${esc(tk.T.title)}</h3>
         ${who ? `<div class="npc-line"><div class="av" style="background:${who === "Sara" ? "#2f3a4c" : who === "Ravi" ? "#e08a1e" : "#1c2633"}">${who[0]}</div><p class="brief">${d.brief}</p></div>` : `<p class="brief">${d.brief}</p>`}
         ${d.facts ? `<div class="facts">${d.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}
@@ -167,7 +167,7 @@ const views = {
       <div class="row-btns" style="margin-top:20px"><button class="btn red" data-act="${rp.after > rp.before ? "promo" : "hub"}">${rp.after > rp.before ? "Open the letter from Sara" : "Back to the firm"}</button></div></article>`;
   },
   promo: () => { const rp = state.report; return `<article class="paper memo fadein"><div class="promo"><span class="label">Haddad &amp; Partners · Promotion</span><div class="big stamp-in">${esc(RANKS[rp.after])}</div>
-    <p>"Congratulations. Your work on ${esc(rp.client)} made the decision easy. From your next ${JOB()} you'll handle ${engLength(rp.after)} tasks."</p><span class="sig">Sara</span>
+    <p>"Congratulations. Your work on ${esc(rp.client)} made the decision easy. From your next ${JOB()} you'll handle ${engLength(rp.after)} tasks${!isStudent() && funTier(rp.after) > funTier(rp.before) ? `, and the questions get a bit trickier (level: ${FUN_LEVEL[funTier(rp.after)].toLowerCase()})` : ""}."</p><span class="sig">Sara</span>
     <button class="btn red" data-act="hub">Back to the firm</button></div></article>`; },
 };
 function ladderHTML() { const rk = rankOf(career().xp); return `<div class="ladder">${RANKS.map((n, i) => `<div class="rung ${i === rk ? "me" : i < rk ? "past" : ""}"><span class="n">${i + 1}</span><b>${n}${i === rk ? " · you" : ""}</b><span class="x">${N(XP_AT[i])} XP</span></div>`).reverse().join("")}</div>`; }
