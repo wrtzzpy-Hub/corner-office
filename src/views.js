@@ -1,5 +1,6 @@
 /* ============================== VIEWS ============================== */
 const ov = document.getElementById("ov");
+const FEEDBACK_URL = "https://tally.so/r/peePV1";
 const JOB = () => isStudent() ? "engagement" : "job";
 const KIND_IC = { calc: "123", mcq: "?", flag: "✗", classify: "≡", count: "#" };
 const stars = pct => pct >= 85 ? "★★★" : pct >= 65 ? "★★☆" : pct >= 40 ? "★☆☆" : "☆☆☆";
@@ -103,6 +104,7 @@ const views = {
         ${isStudent() ? `<button class="btn ghost" data-act="ob1"><span>Change major or year</span></button>` : ""}
         <button class="btn ghost" data-act="ob0"><span>Switch mode</span><small>each mode keeps its own career</small></button>
         <button class="btn ghost" data-act="reset"><span>Reset progress</span></button>
+        <a class="btn ghost" href="${FEEDBACK_URL}" target="_blank" rel="noopener"><span>Give feedback</span><small>2-minute form</small></a>
       </div></div>`;
   },
   brief: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">${esc(ENG.client.name)}</div><div class="label">${ENG.daily ? "Daily challenge · " : ""}${esc(ENG.service)}</div></div>
@@ -161,6 +163,7 @@ const views = {
       <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${rp.daily ? "daily bonus 1.5×" : esc(RANKS[rp.after])}</small></div></div>
       <h3 class="section-h">Task by task</h3><p style="margin:-4px 0 10px;color:var(--ink-dim);font-size:14px">Tap a task to see how it's solved.</p>
       <div class="stack">${rp.items.map(t => `<details ${t.frac < .99 ? "open" : ""}><summary><span>${t.frac >= .99 ? "✓" : t.frac > 0 ? "½" : "✗"} ${esc(t.title)}${t.cap ? " (final)" : ""}</span><span class="num">${t.pts}/${t.max}</span></summary><ol class="steps">${stepsOf(t.explain).map(s => `<li>${s}</li>`).join("")}</ol><p class="key"><b>Remember:</b> ${esc(t.hint)}</p></details>`).join("")}</div>
+      <div class="feedback-cta"><b>Testing the game?</b> Tell me what you thought. It takes 2 minutes. <a class="btn" href="${FEEDBACK_URL}" target="_blank" rel="noopener">Give feedback</a></div>
       <div class="row-btns" style="margin-top:20px"><button class="btn red" data-act="${rp.after > rp.before ? "promo" : "hub"}">${rp.after > rp.before ? "Open the letter from Sara" : "Back to the firm"}</button></div></article>`;
   },
   promo: () => { const rp = state.report; return `<article class="paper memo fadein"><div class="promo"><span class="label">Haddad &amp; Partners · Promotion</span><div class="big stamp-in">${esc(RANKS[rp.after])}</div>
