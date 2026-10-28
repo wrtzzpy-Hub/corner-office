@@ -103,13 +103,15 @@ const views = {
         <p style="margin:0 0 12px;color:var(--ink-dim)">${pr.rk === RANKS.length - 1 ? "You made Partner. Keep playing to raise your average." : pr.need ? `${N(pr.need)} XP until your interview for <b>${RANKS[pr.rk + 1]}</b>` : `You've earned an interview for <b>${RANKS[pr.rk + 1]}</b>!`} · ${N(cr.xp)} XP total</p>
         ${!myName() ? `<button class="namecta" data-act="you">✏️ Add your name and colour so the office knows who you are</button>` : ""}
         <div class="facts"><div class="fact"><div class="v">${cr.eng}</div><div class="k">${isStudent() ? "Engagements" : "Jobs done"}</div></div><div class="fact"><div class="v">${cr.eng ? Math.round(cr.sumPct / cr.eng) + "%" : "–"}</div><div class="k">Average score</div></div><div class="fact"><div class="v">${cr.eng ? cr.best + "%" : "–"}</div><div class="k">Best</div></div></div>
-        <p style="margin:0;color:var(--ink-dim);font-size:14px">Next ${JOB()}: ${engLength(pr.rk)} tasks${isStudent() && baseTier() >= 2 ? " plus a final recommendation" : ""} · ${isStudent() ? `difficulty ${"●".repeat(baseTier())}${"○".repeat(4 - baseTier())}` : `questions: ${FUN_LEVEL[Math.min(3, funTier(pr.rk) + 1)].toLowerCase()}`}</p>
+        <p style="margin:0;color:var(--ink-dim);font-size:14px">Next ${JOB()}: ${engLength(pr.rk)} tasks${isStudent() && baseTier() >= 2 ? " plus a final recommendation" : ""} · ${isStudent() ? `difficulty ${"●".repeat(baseTier())}${"○".repeat(4 - baseTier())}` : `question pack: ${FUN_LEVEL[funTier(pr.rk)].toLowerCase()}`}</p>
       </article>
       <div class="menu">
         ${interviewEarned() ? (interviewReady() ? `<button class="btn red glow" data-act="interview"><span>Promotion interview</span><small>for ${RANKS[pr.rk + 1]} · 3 questions</small></button>` : `<div class="paper" style="padding:12px 14px;font-size:14px">${interviewer(pr.rk + 1).name}: "Not this time, but you were close. Finish one more ${JOB()} and you can try the interview again."</div>`) : ""}
         ${cur ? `<button class="btn ${interviewReady() ? "" : "red"}" data-act="resume"><span>Resume: ${esc(cur.client.name)}</span><small>${Object.values(cur.res).filter(r => r.status === "done").length}/${cur.tasks.length} done</small></button>` : ""}
         <button class="btn ${cur || interviewReady() ? "" : "red"}" data-act="new"><span>New ${JOB()}</span><small>${cur ? "replaces the current one" : "a new client"}</small></button>
         <button class="btn" data-act="daily" ${dailyDone ? "disabled" : ""}><span>Daily challenge</span><small>${dailyDone ? "done today ✓" : "1.5× XP"}</small></button>
+        <button class="btn ${boardReady() ? "" : ""}" data-act="board" ${boardReady() ? "" : "disabled"}><span>🏛️ Board meeting</span><small>${boardReady() ? "5 quick questions · big reward" : "done today ✓"}</small></button>
+        <div class="mgrow"><button class="btn ghost" data-act="till"><span>🧾 Till rush</span><small>best ${save.best.till || 0}</small></button><button class="btn ghost" data-act="sortgame"><span>📦 Stock sort</span><small>best ${save.best.sort || 0}</small></button></div>
         <button class="btn" data-act="hq"><span>Walk around the office</span><small>${esc(WS_NAME[WS_OF(pr.rk)].toLowerCase())}, café, coworkers</small></button>
         ${conf ? `<div class="confirm paper" style="padding:12px"><p style="margin:0 0 8px">${conf === "reset" ? "Erase all progress in both modes? This can't be undone." : `Quit the current ${JOB()}? Its progress will be lost.`}</p><div class="row-btns"><button class="btn red" data-act="confirmyes">${conf === "reset" ? "Erase everything" : "Abandon it"}</button><button class="btn plain" data-act="confirmno" style="background:#fff">Cancel</button></div></div>` : ""}
         ${location.hash === "#dev" ? `<div class="paper devbox"><b>Tester tools</b><span>Jump to a rank to try its questions. Your next new ${JOB()} uses the new level.</span><div class="picks">${RANKS.map((n, i) => `<button class="pickb ${i === pr.rk ? "sel" : ""}" data-act="devrank" data-id="${i}">${n}</button>`).join("")}</div><button class="btn plain" data-act="deviv" style="margin-top:8px">Unlock the next interview</button></div>` : ""}
@@ -275,17 +277,18 @@ const views = {
 };
 const PERKS = ["", "You get your own desk with your nameplate.", "Your desk gets a plant and a photo frame.", "You get your own private office.", "Your office gets a whiteboard for leading the team.", "Your office gets a sofa for meeting clients.", "You move into the corner office, with windows on two sides.", "A gold trophy for your desk. You've made it to the top."];
 const perkLine = rk => PERKS[rk] || "";
+Object.assign(views, mgViews());
 function ladderHTML() { const rk = curRank(); return `<div class="ladder">${RANKS.map((n, i) => `<div class="rung ${i === rk ? "me" : i < rk ? "past" : ""}"><span class="n">${i + 1}</span><b>${n}${i === rk ? " · you" : ""}</b><span class="x">${N(XP_AT[i])} XP</span></div>`).reverse().join("")}</div>`; }
 
 function renderUI() {
   if (!ENG) ensureHQWorld();
   renderHud();
-  if (!["task", "interview", "call", "inbox"].includes(state.ui) && calc.open) toggleCalc(false);
+  if (!["task", "interview", "call", "inbox", "board"].includes(state.ui) && calc.open) toggleCalc(false);
   if (!state.ui) { ov.hidden = true; ov.innerHTML = ""; return; }
   ov.hidden = false; ov.innerHTML = `<div class="ov-inner">${views[state.ui]()}</div>`;
   if (state.ui === "report") countUp();
   if (state.ui === "task") { const a = document.getElementById("ans"); if (a && !isTouch && !calc.open) a.focus({ preventScroll: true }); }
-  if (!["task", "interview", "call", "inbox"].includes(state.ui) && calc.open) toggleCalc(false); else renderCalc();
+  if (!["task", "interview", "call", "inbox", "board"].includes(state.ui) && calc.open) toggleCalc(false); else renderCalc();
 }
 function countUp() {
   const target = state.report.score, el = document.getElementById("bigscore"), t0 = performance.now();
@@ -332,6 +335,14 @@ document.addEventListener("click", e => {
     case "dealsubmit": if (state.dealQ && state.dealQ.sel !== null) answerDeal(state.dealQ.sel); break;
     case "shop": Audio.play("paper"); state.ui = "shop"; renderUI(); ov.scrollTop = 0; break;
     case "buy": { const it = SHOP.find(i => i.id === id); if (!it || save.owned[it.id] || save.cash < it.price || !canPlace(it)) break; save.cash -= it.price; save.owned[it.id] = today(); persist(); Audio.play("fanfare"); award("shopper"); if (it.id === "car") award("tycoon"); toast(`${it.ic} ${it.name} is yours!`); renderUI(); break; }
+    case "board": if (boardReady()) { state.mgFrom = "hub"; Audio.play("knock"); startBoard(); } break;
+    case "till": if (!state.mgFrom || state.ui === "hub") state.mgFrom = state.ui === "hub" ? "hub" : state.mgFrom; Audio.play("click"); startTill(); break;
+    case "sortgame": if (!state.mgFrom || state.ui === "hub") state.mgFrom = state.ui === "hub" ? "hub" : state.mgFrom; Audio.play("click"); startSort(); break;
+    case "mgopt": boardAnswer(+id); break;
+    case "mgnext": boardNext(); break;
+    case "tillopt": tillAnswer(+id); break;
+    case "sortopt": sortAnswer(id); break;
+    case "mgdone": { clearInterval(mgTimer); state.mg = null; const from = state.mgFrom; state.mgFrom = null; Audio.play("paper"); if (from === "hq" && !ENG) closeUI(); else { state.ui = "hub"; renderUI(); } break; }
     case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
     case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
     case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }

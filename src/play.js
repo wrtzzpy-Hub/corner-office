@@ -60,6 +60,9 @@ function rebuildInter() {
     INTER.push({ id: "myspace", ...ms, label: hc.ws === "hot" ? "Hot desk · interns" : `${myName() || "You"} · ${RANKS[hc.rank]}`, verb: openDeal() ? "Check your inbox (1 new)" : hc.ws === "hot" ? "Sit at the hot desk" : `Sit at ${WS_NAME[hc.ws].toLowerCase()}`, fixed: true, mine: true });
     INTER.push({ id: "sara", ...FIXED.sara, label: `Sara · ${RANKS[Math.min(5, Math.max(4, curRank() + 1))]}`, verb: ivw && ivw.name === "Sara" ? "Start your promotion interview" : "Ask Sara for a job", fixed: true });
     INTER.push({ id: "khalid", x: NPCS.exec.x, z: NPCS.exec.z, y: 2.15, room: "exec", ap: STATIONS.exec.ap, reach: 4, label: "Khalid Haddad · Director", place: "the Executive suite", verb: ivw && ivw.name === "Khalid Haddad" ? "Start your promotion interview" : "Say hello to Khalid", fixed: true });
+    INTER.push({ id: "boardtable", x: 6, z: 5.9, y: 1.35, room: "meet", ap: [6, 7.85], label: "Board meeting", verb: boardReady() ? "Start today's board meeting" : "The board meets again tomorrow", fixed: true, place: "the meeting room" });
+    INTER.push({ id: "till", x: 43.6, z: 22.6, y: 1.5, room: "cafe", ap: [43.6, 21.55], reach: 2.2, label: "Till · mini-game", verb: "Run the till (mini-game)", fixed: true, place: "the café" });
+    INTER.push({ id: "ravi", x: 30.5, z: 19.6, y: 2.1, room: "stock", ap: [30.5, 21.1], label: "Ravi · Stockroom", verb: "Help Ravi sort stock (mini-game)", fixed: true, place: "the Stockroom" });
     const lay = CW.find(c => c.id === "layla"); if (lay && ivw && ivw.name === "Layla Haddad") { const it = INTER.find(i => i.id === "cw:layla"); it.verb = "Start your promotion interview"; it.ap = [45, 6.9]; it.reach = 3.9; }
   }
   if (ENG) {
@@ -240,7 +243,7 @@ let last = performance.now(), PV, pathGL = null;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; const t = now / 1000;
   update(dt); if ((ENG && !ENG.done) || hqWalk()) updateGuide(dt); else guide.it = null;
-  if (ENG && ["task", "overview", "note", "brief", "report", "promo", "event", "call", "interview", "badges"].includes(state.ui)) { requestAnimationFrame(frame); return; }
+  if (ENG && ["task", "overview", "note", "brief", "report", "promo", "event", "call", "interview", "badges", "board", "till", "sort", "shop", "clients", "inbox"].includes(state.ui)) { requestAnimationFrame(frame); return; }
   const dpr = Math.min(2, devicePixelRatio || 1), w = Math.floor(cv.clientWidth * dpr), h = Math.floor(cv.clientHeight * dpr);
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   gl.viewport(0, 0, w, h); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -372,7 +375,7 @@ function renderHud() {
   objEl.hidden = mini.hidden = !showWorldUI; document.getElementById("cross").hidden = !showWorldUI;
   if (showWorldUI && !ENG) {
     const hc = hqCfg(), iv = interviewReady() ? interviewer(hc.rank + 1) : null;
-    const items = [iv ? { t: `Promotion interview with ${iv.name}`, s: `to become ${RANKS[hc.rank + 1]}`, cur: true } : null, openDeal() ? { t: "📧 New message about a deal", s: `Check the inbox at ${WS_NAME[hc.ws].toLowerCase()}`, cur: !iv } : null, { t: `Visit ${WS_NAME[hc.ws].toLowerCase()}`, s: MYSPACE[hc.ws].place, cur: !iv && !state.hqSeen, done: state.hqSeen }, state.coffee === "fetch" ? { t: "Pick up the coffee order", s: "The Ledger Café", cur: true } : { t: "Grab a coffee", s: "The Ledger Café, east end", done: state.hadCoffee }, { t: "Talk to Sara to start a job", s: "Meeting room", cur: !iv && state.hqSeen }].filter(Boolean);
+    const items = [iv ? { t: `Promotion interview with ${iv.name}`, s: `to become ${RANKS[hc.rank + 1]}`, cur: true } : null, openDeal() ? { t: "📧 New message about a deal", s: `Check the inbox at ${WS_NAME[hc.ws].toLowerCase()}`, cur: !iv } : null, { t: `Visit ${WS_NAME[hc.ws].toLowerCase()}`, s: MYSPACE[hc.ws].place, cur: !iv && !state.hqSeen, done: state.hqSeen }, state.coffee === "fetch" ? { t: "Pick up the coffee order", s: "The Ledger Café", cur: true } : { t: "Grab a coffee", s: "The Ledger Café, east end", done: state.hadCoffee }, boardReady() ? { t: "🏛️ Today's board meeting", s: "Meeting room table" } : null, { t: "Talk to Sara to start a job", s: "Meeting room", cur: !iv && state.hqSeen }].filter(Boolean);
     objEl.innerHTML = `<h4><span>Haddad &amp; Partners HQ</span><span>${esc(RANKS[hc.rank])}</span></h4><ol>${items.map(i => `<li class="${i.cur ? "cur" : ""} ${i.done ? "done" : ""}"><span>${i.done ? "✓ " : ""}${esc(i.t)}${i.s ? `<small>${esc(i.s)}</small>` : ""}</span></li>`).join("")}</ol>`;
   } else if (showWorldUI) {
     let items;
@@ -420,6 +423,9 @@ function interact() {
   if (!ENG) {
     if (it.id === "myspace") { Audio.play("paper"); if (!state.hqSeen) { state.hqSeen = true; guideT = 0; } if (openDeal()) { state.dealQ = null; return openUI("inbox"); } return openUI("desk"); }
     if (it.id === "sara") { Audio.play("click"); toast(`Sara: "${hi("Ready for work")}? Pick your next job."`); return openUI("hub"); }
+    if (it.id === "boardtable") { if (boardReady()) { state.mgFrom = "hq"; Audio.play("knock"); return startBoard(); } toast("The board has already met today. Come back tomorrow!"); return; }
+    if (it.id === "till") { state.mgFrom = "hq"; Audio.play("click"); return startTill(); }
+    if (it.id === "ravi") { state.mgFrom = "hq"; Audio.play("click"); return startSort(); }
     if (it.id === "khalid") { Audio.play("click"); toast(`Khalid: "${["Keep it up", "Good to see you", "The clients love your work"][Math.floor(Math.random() * 3)]}${myName() ? ", " + myName() : ""}!"`); return; }
   }
   if (it.id === "notice") { Audio.play("paper"); state.note = "facts"; return openUI("note"); }
