@@ -9,16 +9,20 @@ const LOST = [
   { thing: "notebook", x: 7.1, z: 21.9, y: .42, hint: "on the round table in the Lobby" },
 ];
 const EV_BONUS = { call: 50, lost: 40, coffee: 30, crisis: 80 };
+if (!save.tut) save.tut = {};
+const TUT_ORDER = ["coffee", "lost", "call"];
 function planEvent(eng) {
   if (eng.ev !== undefined) return;
   const r = mul32(eng.seed + 4242), h = H(r);
-  if (eng.tasks.length < 4 || r() < .2) { eng.ev = null; return; }
+  const tutLeft = TUT_ORDER.filter(t => !save.tut[t]);
+  if (tutLeft.length && !eng.office && !eng.daily && eng.tasks.length >= 3) { const type = tutLeft[0]; eng.ev = { type, at: 1, status: "waiting", tut: TUT_ORDER.length - tutLeft.length + 1, spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 }; return; }
+  if (eng.tasks.length < 4 || r() < .45) { eng.ev = null; return; }
   const sen = curRank() >= 5, type = eng.office ? h.pick(["call", "crisis", "crisis"]) : sen ? h.pick(["call", "crisis", "lost", "coffee"]) : h.pick(["call", "lost", "coffee"]);
   eng.ev = { type, at: 1 + Math.floor(r() * Math.min(3, eng.tasks.length - 2)), status: "waiting", spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 };
 }
 const evOf = () => ENG && ENG.ev;
 function bonusAdd(label, pts) { ENG.bonus = ENG.bonus || []; ENG.bonus.push({ label, pts }); const e = save.cur[save.mode]; if (e) e.bonus = ENG.bonus; }
-function syncEv() { const e = save.cur[save.mode]; if (e && ENG) { e.ev = ENG.ev; e.bonus = ENG.bonus; } persist(); state.coffee = ENG && ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null; }
+function syncEv() { const ev0 = ENG && ENG.ev; if (ev0 && ev0.tut && ["won", "lost", "declined"].includes(ev0.status)) save.tut[ev0.type] = true; const e = save.cur[save.mode]; if (e && ENG) { e.ev = ENG.ev; e.bonus = ENG.bonus; } persist(); state.coffee = ENG && ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null; }
 function maybeFireEvent() {
   const ev = evOf(); if (!ev || ev.status !== "waiting" || !ENG.briefed || doneCount() < ev.at || allTasksDone()) return false;
   ev.status = "offered"; syncEv();
@@ -26,7 +30,8 @@ function maybeFireEvent() {
   else Audio.play("blip");
   openUI("event"); return true;
 }
-function eventCard() {
+function eventCard() { const e = eventCard0(), ev = evOf(); if (ev.tut) { e.tut = `Bonus tasks · training ${ev.tut} of ${TUT_ORDER.length}`; e.body += `<br><br><small>Bonus tasks pop up during jobs and pay extra points. This one is part of your training. After your training, they're always optional: accept them or skip them.</small>`; e.no = null; } return e; }
+function eventCard0() {
   const ev = evOf(), c = ENG.client, lost = LOST[ev.spot];
   if (ev.type === "crisis") return { who: "Hind", role: "Your assistant", av: "H", col: "#2f3a4c", h: "🚨 We have a problem!", body: `"${hi("Sorry to interrupt")}, something urgent has come up and it needs your decision right now. You'll have 30 seconds."`, yes: "Deal with it", no: "Ignore it", bonus: EV_BONUS.crisis };
   if (ev.type === "call") return { who: c.exec, role: c.role, av: c.exec[0], col: "#1c2633", h: "📞 Urgent call!", body: `"${hi("Hello")}! It's ${esc(firstName(c.exec))}. I've got a quick question and I need an answer in the next 30 seconds."`, yes: "Answer the phone", no: "Let it ring", bonus: EV_BONUS.call };

@@ -123,6 +123,7 @@ const views = {
         ${curRank() >= 3 || dealsList().length ? `<button class="btn ${openDeal() ? "red glow" : "ghost"}" data-act="inbox"><span>📧 Inbox</span><small>${openDeal() ? "1 new message" : "deals between your clients"}</small></button>` : ""}
         <button class="btn ghost" data-act="shop"><span>🛍️ Shop</span><small>${A(save.cash)}</small></button>
         <button class="btn ghost" data-act="clients"><span>Your clients</span><small>${activeClients().length} active</small></button>
+        <button class="btn ghost" data-act="cards"><span>🗂️ Business cards</span><small>${Object.keys(clientsMap()).length} collected</small></button>
         <button class="btn ghost" data-act="badges"><span>Badges</span><small>${Object.keys(save.badges).length}/${BADGES.length}</small></button>
         <button class="btn ghost" data-act="you"><span>Your profile</span><small>name and colour</small></button>
         <button class="btn ghost" data-act="ladder"><span>Career ladder</span></button>
@@ -138,6 +139,7 @@ const views = {
     <h2>Today's ${JOB()}</h2>
     ${ENG.office ? `<p>"${hi("Good morning")}! Today's client is ${esc(ENG.client.name)}. You don't need to go anywhere: files come to <b>your computer</b>, visitors and candidates will come to <b>your office</b>, and calls come through as <b>video calls</b>. ${ENG.list.some(t => t.auto) ? "Ravi is already counting the stock for you. " : ""}Anything with legwork, send to your team from the task list, then review what they hand back. Come and see me when the day's done."</p>` : curRank() === 4 ? `<p class="clientline">👥 <b>You're a Manager now.</b> Open the task list (${isTouch ? "tap Tasks" : "press T"}) and press <b>Send</b> to hand up to 2 tasks to your team. They'll bring the work back for you to review, so you walk less.</p>` : ""}
     ${isStudent() ? `<p>"${hi("Welcome")}! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"${hi()}! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
+    ${ENG.legend ? `<p class="clientline legend">👑 <b>Legendary client!</b> ${esc(ENG.client.name)} is one of the biggest names in the city. This job pays 25% more XP.</p>` : ""}
     ${clientBriefLine()}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
     <p class="label" style="color:var(--ink-dim)">${isTouch ? "Tap Tasks" : "Press T"} any time to see this list again.</p>
@@ -226,9 +228,9 @@ const views = {
       : `<p class="instr">One try per question. Use the calculator if you need it.</p><div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="ivsubmit" ${iv.sel === null ? "disabled" : ""}>Lock in</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
-  event: () => { const e = eventCard(); return `<article class="paper memo fadein"><div class="letterhead"><div class="co">Surprise!</div><div class="label">Bonus +${e.bonus} pts</div></div>
+  event: () => { const e = eventCard(); return `<article class="paper memo fadein"><div class="letterhead"><div class="co">${e.tut ? esc(e.tut) : "Surprise!"}</div><div class="label">Bonus +${e.bonus} pts</div></div>
     <div class="npc-line"><div class="av" style="background:${e.col}">${esc(e.av)}</div><div><b>${esc(e.who)}</b><small style="display:block;color:var(--ink-dim)">${esc(e.role)}</small><h2 style="margin-top:6px">${e.h}</h2><p>${e.body}</p></div></div>
-    <div class="row-btns"><button class="btn red" data-act="evyes">${esc(e.yes)}</button><button class="btn plain" data-act="evno">${esc(e.no)}</button></div></article>`; },
+    <div class="row-btns"><button class="btn red" data-act="evyes">${esc(e.yes)}</button>${e.no ? `<button class="btn plain" data-act="evno">${esc(e.no)}</button>` : ""}</div></article>`; },
   call: () => {
     const c = state.call, ans = c.picked !== null, ok = c.picked === c.correct, cl = ENG.client;
     return `<section class="fadein"><article class="paper callcard">
@@ -267,6 +269,10 @@ const views = {
       : `<div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="dealsubmit" ${q.sel === null ? "disabled" : ""}>Send my advice</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
+  cards: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">🗂️ Business cards</div><div class="label">${Object.keys(clientsMap()).length} collected · ${Object.values(clientsMap()).filter(c => c.legend).length}/${LEGENDS.length} legendary</div></div>
+    <p style="margin-top:0">You get a card from every company you work for. Help a client grow into a big company and their card turns <b>rare</b>. About 1 in 12 new clients is <b>legendary</b>: they pay 25% more XP.</p>
+    ${Object.keys(clientsMap()).length ? cardsHTML() : "<p>No cards yet. Finish a job to get your first one.</p>"}
+    <button class="btn red" data-act="hub" style="margin-top:14px">Back</button></article>`,
   shop: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">🛍️ Shop</div><div class="label">You have ${A(save.cash)}</div></div>
     <p style="margin-top:0">Spend your salary on things for ${esc(WS_NAME[WS_OF(curRank())].toLowerCase())}. Everything you buy appears there when you walk around the office.</p>
     <div class="shop">${SHOP.map(it => { const own = save.owned[it.id], lock = !canPlace(it), afford = save.cash >= it.price; return `<div class="sitem ${own ? "own" : ""}"><span class="bi">${it.ic}</span><b>${esc(it.name)}</b><small>${esc(it.blurb)}</small>${own ? `<span class="tagok">Owned ✓${lock ? " · shows in your office" : ""}</span>` : lock ? `<button class="btn plain" disabled>Needs your own office</button>` : `<button class="btn ${afford ? "red" : "plain"}" data-act="buy" data-id="${it.id}" ${afford ? "" : "disabled"}>${A(it.price)}</button>`}</div>`; }).join("")}</div>
@@ -338,6 +344,7 @@ document.addEventListener("click", e => {
     case "evno": declineEvent(); break;
     case "callopt": if (state.call && state.call.picked === null) { state.call.sel = +id; Audio.play("click"); renderUI(); startCallTimer(); } break;
     case "callsubmit": if (state.call && state.call.sel !== null) finishCall(state.call.sel); break;
+    case "cards": Audio.play("paper"); state.ui = "cards"; renderUI(); ov.scrollTop = 0; break;
     case "clients": Audio.play("paper"); state.ui = "clients"; renderUI(); ov.scrollTop = 0; break;
     case "inbox": Audio.play("paper"); state.dealQ = null; state.ui = "inbox"; renderUI(); ov.scrollTop = 0; break;
     case "dealopt": if (state.dealQ && state.dealQ.picked === null) { state.dealQ.sel = +id; Audio.play("click"); renderUI(); } break;

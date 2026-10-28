@@ -461,7 +461,7 @@ function orderCoffee(c) {
 }
 function openTask(key) { state.task = key; state.sel = null; state.picks = new Set(); state.cls = {}; state.msg = ""; state.hintOpen = false; state.mentor = ""; pcOpened(taskByKey(key)); openUI("task"); }
 function openUI(ui) {
-  if (ui === "task") document.querySelectorAll(".toast:not(.badge-toast)").forEach(t => t.remove());
+  document.querySelectorAll(".toast:not(.badge-toast)").forEach(t => t.remove());
   state.ui = ui; if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) {} }
   for (const k in keys) keys[k] = false; joy = null; stick.hidden = true;
   renderUI(); updatePrompt(); ov.scrollTop = 0;
@@ -507,7 +507,7 @@ function finishEngagement() {
   const score = items.reduce((s, t) => s + (ENG.res[t.key]?.pts || 0), 0), max = items.reduce((s, t) => s + ptsFor(t.tier), 0), pct = score / max * 100;
   const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak), bonus = (ENG.bonus || []).reduce((a, b) => a + b.pts, 0);
   const cu = updateClient(ENG, pct);
-  const xp = Math.round((score + bonus) * (cu && cu.loyalBonus ? 1.1 : 1) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
+  const xp = Math.round((score + bonus) * (cu && cu.loyalBonus ? 1.1 : 1) * (ENG.legend ? 1.25 : 1) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
   const cr = career(); cr.xp += xp; cr.eng += 1; cr.sumPct += pct; cr.best = Math.max(cr.best, Math.round(pct));
   if (ENG.daily) save.daily[save.mode] = ENG.date;
   const after = curRank(), noHint = items.every(t => !ENG.res[t.key]?.hint);

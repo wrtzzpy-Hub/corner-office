@@ -406,6 +406,14 @@ body.pcmode #calc{right:7vw;bottom:70px;border-top:28px solid #2b3445;border-rad
 .calc-line{display:flex;flex-direction:column;gap:2px;background:#0e151e;border:1px solid var(--mat-line);border-radius:8px;padding:8px 10px;margin-bottom:8px}.calc-line input{border:0;background:none;color:#fff;font:600 18px Menlo,Consolas,monospace;outline:none;width:100%}.calc-live{align-self:flex-end;color:var(--hi);font:700 16px Menlo,Consolas,monospace;min-height:20px}.calc-live.bad{color:var(--chalk-dim)}
 .calc-keys{display:grid!important;grid-template-columns:repeat(6,1fr)!important;gap:5px!important}.calc-keys button{min-width:0;padding:10px 0!important;font-size:15px!important}.calc-keys.fx{grid-template-columns:repeat(4,1fr)!important}.calc-keys.fx button{font-size:13px!important}.calc-keys .fn{color:var(--hi)}
 td,th{color:inherit}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.bcard{position:relative;aspect-ratio:1.75;border-radius:10px;padding:12px 14px;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.15);display:flex;flex-direction:column;justify-content:space-between;border-left:8px solid var(--stripe);overflow:hidden}
+.bcard .bc-top{display:flex;justify-content:space-between;gap:6px}.bcard .bc-top b{font-size:15px;line-height:1.2}.bcard .rar{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)}
+.bcard .bc-mid span{display:block;font-weight:600}.bcard .bc-mid small{color:var(--ink-dim)}.bcard .bc-foot{display:flex;gap:10px;font-size:11px;color:var(--ink-dim)}
+.bcard.rare{background:linear-gradient(135deg,#fff,#e8edf3 60%,#fff);box-shadow:0 3px 12px rgba(47,109,179,.3)}.bcard.rare .rar{color:#2f6db3;font-weight:700}
+.bcard.legendary{background:linear-gradient(135deg,#1b1a17,#3a3020 50%,#1b1a17);color:#f3dc94;box-shadow:0 4px 18px rgba(201,162,74,.55)}.bcard.legendary .rar,.bcard.legendary small,.bcard.legendary .bc-foot{color:#d9b44a;font-weight:700}
+.bcard.legendary::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,230,150,.25) 45%,transparent 60%);animation:holo 3s linear infinite}@keyframes holo{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.bcard.lost{opacity:.5;filter:grayscale(.8)}.clientline.legend{background:#2a2418;color:#f3dc94}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>

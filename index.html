@@ -413,6 +413,14 @@ body.pcmode #calc{right:7vw;bottom:70px;border-top:28px solid #2b3445;border-rad
 .calc-line{display:flex;flex-direction:column;gap:2px;background:#0e151e;border:1px solid var(--mat-line);border-radius:8px;padding:8px 10px;margin-bottom:8px}.calc-line input{border:0;background:none;color:#fff;font:600 18px Menlo,Consolas,monospace;outline:none;width:100%}.calc-live{align-self:flex-end;color:var(--hi);font:700 16px Menlo,Consolas,monospace;min-height:20px}.calc-live.bad{color:var(--chalk-dim)}
 .calc-keys{display:grid!important;grid-template-columns:repeat(6,1fr)!important;gap:5px!important}.calc-keys button{min-width:0;padding:10px 0!important;font-size:15px!important}.calc-keys.fx{grid-template-columns:repeat(4,1fr)!important}.calc-keys.fx button{font-size:13px!important}.calc-keys .fn{color:var(--hi)}
 td,th{color:inherit}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.bcard{position:relative;aspect-ratio:1.75;border-radius:10px;padding:12px 14px;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.15);display:flex;flex-direction:column;justify-content:space-between;border-left:8px solid var(--stripe);overflow:hidden}
+.bcard .bc-top{display:flex;justify-content:space-between;gap:6px}.bcard .bc-top b{font-size:15px;line-height:1.2}.bcard .rar{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)}
+.bcard .bc-mid span{display:block;font-weight:600}.bcard .bc-mid small{color:var(--ink-dim)}.bcard .bc-foot{display:flex;gap:10px;font-size:11px;color:var(--ink-dim)}
+.bcard.rare{background:linear-gradient(135deg,#fff,#e8edf3 60%,#fff);box-shadow:0 3px 12px rgba(47,109,179,.3)}.bcard.rare .rar{color:#2f6db3;font-weight:700}
+.bcard.legendary{background:linear-gradient(135deg,#1b1a17,#3a3020 50%,#1b1a17);color:#f3dc94;box-shadow:0 4px 18px rgba(201,162,74,.55)}.bcard.legendary .rar,.bcard.legendary small,.bcard.legendary .bc-foot{color:#d9b44a;font-weight:700}
+.bcard.legendary::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,230,150,.25) 45%,transparent 60%);animation:holo 3s linear infinite}@keyframes holo{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.bcard.lost{opacity:.5;filter:grayscale(.8)}.clientline.legend{background:#2a2418;color:#f3dc94}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>
@@ -1464,6 +1472,7 @@ function interviewNext() {
 }
 /* ============================== CLIENTS WHO REMEMBER YOU, THE RIVAL FIRM, DEALS BETWEEN COMPANIES ============================== */
 const RIVAL = "Falcon Advisory";
+const LEGENDS = ["Burj Crown Holdings", "Royal Pearl Group", "Golden Falcon Ventures", "Emerald Sands Resorts", "Atlas Sky Airlines", "Sultan & Sons Trading"];
 const SIZE_NAMES = ["Start-up", "Small business", "Growing company", "Big company", "Market leader"];
 if (!save.clientsBy) save.clientsBy = { casual: {}, student: {} };
 if (!save.dealsBy) save.dealsBy = { casual: [], student: [] };
@@ -1486,7 +1495,16 @@ function chooseClient(eng, h, r) {
   }
   const taken = new Set(Object.keys(clientsMap()));
   for (let k = 0; k < 30 && taken.has(eng.client.name); k++) eng.client.name = h.pick(NAMES) + " " + INDUSTRIES.find(i => i.ind === eng.client.ind).sfx;
+  const freeLegends = LEGENDS.filter(n => !taken.has(n));
+  if (curRank() >= 1 && freeLegends.length && r() < .08) { eng.client.name = h.pick(freeLegends); eng.legend = true; eng.client.stripe = "#c9a24a"; }
   if (curRank() >= 2 && r() < .35) eng.pitch = true;
+}
+BADGES.push({ id: "legend", ic: "👑", name: "Legendary client", how: "Work for a legendary client" }, { id: "cards10", ic: "🗂️", name: "Networker", how: "Collect 10 business cards" });
+for (const b of BADGES) BADGE[b.id] = b;
+const rarityOf = c => c.legend ? "legendary" : c.size >= 3 ? "rare" : "common";
+function cardsHTML() {
+  const all = Object.values(clientsMap()).sort((a, b) => (b.legend - a.legend) || b.size - a.size || b.trust - a.trust);
+  return `<div class="cards">${all.map(c => { const ind = INDUSTRIES[c.ind] || INDUSTRIES[0], ex = EXECS[c.ex] || EXECS[0], rar = rarityOf(c); return `<div class="bcard ${rar} ${c.status === "rival" ? "lost" : ""}" style="--stripe:${c.legend ? "#c9a24a" : ind.stripe}"><div class="bc-top"><b>${esc(c.name)}</b><span class="rar">${rar}</span></div><div class="bc-mid"><span>${esc(ex[0])}</span><small>${esc(ind.ind)}</small></div><div class="bc-foot"><span>Trust ${c.trust}</span><span>${SIZE_NAMES[c.size]}</span>${c.status === "rival" ? `<span>with ${RIVAL}</span>` : ""}</div></div>`; }).join("")}</div>`;
 }
 function clientRecord(eng) {
   return clientsMap()[eng.client.name];
@@ -1502,7 +1520,7 @@ function clientBriefLine() {
 function updateClient(eng, pct) {
   if (eng.daily) return null;
   const map = clientsMap(); let c = map[eng.client.name], out = { name: eng.client.name };
-  if (!c) { c = map[eng.client.name] = { name: eng.client.name, ind: INDUSTRIES.findIndex(i => i.ind === eng.client.ind), ex: EXECS.findIndex(e => e[0] === eng.client.exec), palette: eng.palette, trust: 50, jobs: 0, size: sizeOf(50), status: "active" }; out.isNew = true; }
+  if (!c) { c = map[eng.client.name] = { met: today(), legend: !!eng.legend, name: eng.client.name, ind: INDUSTRIES.findIndex(i => i.ind === eng.client.ind), ex: EXECS.findIndex(e => e[0] === eng.client.exec), palette: eng.palette, trust: 50, jobs: 0, size: sizeOf(50), status: "active" }; out.isNew = true; }
   const before = c.trust, d = pct >= 85 ? 15 : pct >= 65 ? 8 : pct >= 45 ? -5 : -15;
   c.jobs++; c.grew = false;
   if (eng.pitch) {
@@ -1511,7 +1529,7 @@ function updateClient(eng, pct) {
   } else c.trust = Math.max(0, Math.min(100, c.trust + d));
   const sz = sizeOf(c.trust); if (sz > c.size) { c.grew = true; out.grew = SIZE_NAMES[sz]; } c.size = Math.max(c.size, sz);
   if (c.trust < 20 && c.status === "active") { c.status = "rival"; out.left = true; }
-  if (c.trust >= 80) award("loyal");
+  if (c.trust >= 80) award("loyal"); if (c.legend) award("legend"); if (Object.keys(map).length >= 10) award("cards10");
   Object.assign(out, { before, after: c.trust, label: trustLabel(c.trust), loyalBonus: before >= 80 && !eng.pitch });
   return out;
 }
@@ -2789,7 +2807,7 @@ function orderCoffee(c) {
 }
 function openTask(key) { state.task = key; state.sel = null; state.picks = new Set(); state.cls = {}; state.msg = ""; state.hintOpen = false; state.mentor = ""; pcOpened(taskByKey(key)); openUI("task"); }
 function openUI(ui) {
-  if (ui === "task") document.querySelectorAll(".toast:not(.badge-toast)").forEach(t => t.remove());
+  document.querySelectorAll(".toast:not(.badge-toast)").forEach(t => t.remove());
   state.ui = ui; if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) {} }
   for (const k in keys) keys[k] = false; joy = null; stick.hidden = true;
   renderUI(); updatePrompt(); ov.scrollTop = 0;
@@ -2835,7 +2853,7 @@ function finishEngagement() {
   const score = items.reduce((s, t) => s + (ENG.res[t.key]?.pts || 0), 0), max = items.reduce((s, t) => s + ptsFor(t.tier), 0), pct = score / max * 100;
   const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak), bonus = (ENG.bonus || []).reduce((a, b) => a + b.pts, 0);
   const cu = updateClient(ENG, pct);
-  const xp = Math.round((score + bonus) * (cu && cu.loyalBonus ? 1.1 : 1) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
+  const xp = Math.round((score + bonus) * (cu && cu.loyalBonus ? 1.1 : 1) * (ENG.legend ? 1.25 : 1) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
   const cr = career(); cr.xp += xp; cr.eng += 1; cr.sumPct += pct; cr.best = Math.max(cr.best, Math.round(pct));
   if (ENG.daily) save.daily[save.mode] = ENG.date;
   const after = curRank(), noHint = items.every(t => !ENG.res[t.key]?.hint);
@@ -2858,16 +2876,20 @@ const LOST = [
   { thing: "notebook", x: 7.1, z: 21.9, y: .42, hint: "on the round table in the Lobby" },
 ];
 const EV_BONUS = { call: 50, lost: 40, coffee: 30, crisis: 80 };
+if (!save.tut) save.tut = {};
+const TUT_ORDER = ["coffee", "lost", "call"];
 function planEvent(eng) {
   if (eng.ev !== undefined) return;
   const r = mul32(eng.seed + 4242), h = H(r);
-  if (eng.tasks.length < 4 || r() < .2) { eng.ev = null; return; }
+  const tutLeft = TUT_ORDER.filter(t => !save.tut[t]);
+  if (tutLeft.length && !eng.office && !eng.daily && eng.tasks.length >= 3) { const type = tutLeft[0]; eng.ev = { type, at: 1, status: "waiting", tut: TUT_ORDER.length - tutLeft.length + 1, spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 }; return; }
+  if (eng.tasks.length < 4 || r() < .45) { eng.ev = null; return; }
   const sen = curRank() >= 5, type = eng.office ? h.pick(["call", "crisis", "crisis"]) : sen ? h.pick(["call", "crisis", "lost", "coffee"]) : h.pick(["call", "lost", "coffee"]);
   eng.ev = { type, at: 1 + Math.floor(r() * Math.min(3, eng.tasks.length - 2)), status: "waiting", spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 };
 }
 const evOf = () => ENG && ENG.ev;
 function bonusAdd(label, pts) { ENG.bonus = ENG.bonus || []; ENG.bonus.push({ label, pts }); const e = save.cur[save.mode]; if (e) e.bonus = ENG.bonus; }
-function syncEv() { const e = save.cur[save.mode]; if (e && ENG) { e.ev = ENG.ev; e.bonus = ENG.bonus; } persist(); state.coffee = ENG && ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null; }
+function syncEv() { const ev0 = ENG && ENG.ev; if (ev0 && ev0.tut && ["won", "lost", "declined"].includes(ev0.status)) save.tut[ev0.type] = true; const e = save.cur[save.mode]; if (e && ENG) { e.ev = ENG.ev; e.bonus = ENG.bonus; } persist(); state.coffee = ENG && ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null; }
 function maybeFireEvent() {
   const ev = evOf(); if (!ev || ev.status !== "waiting" || !ENG.briefed || doneCount() < ev.at || allTasksDone()) return false;
   ev.status = "offered"; syncEv();
@@ -2875,7 +2897,8 @@ function maybeFireEvent() {
   else Audio.play("blip");
   openUI("event"); return true;
 }
-function eventCard() {
+function eventCard() { const e = eventCard0(), ev = evOf(); if (ev.tut) { e.tut = `Bonus tasks · training ${ev.tut} of ${TUT_ORDER.length}`; e.body += `<br><br><small>Bonus tasks pop up during jobs and pay extra points. This one is part of your training. After your training, they're always optional: accept them or skip them.</small>`; e.no = null; } return e; }
+function eventCard0() {
   const ev = evOf(), c = ENG.client, lost = LOST[ev.spot];
   if (ev.type === "crisis") return { who: "Hind", role: "Your assistant", av: "H", col: "#2f3a4c", h: "🚨 We have a problem!", body: `"${hi("Sorry to interrupt")}, something urgent has come up and it needs your decision right now. You'll have 30 seconds."`, yes: "Deal with it", no: "Ignore it", bonus: EV_BONUS.crisis };
   if (ev.type === "call") return { who: c.exec, role: c.role, av: c.exec[0], col: "#1c2633", h: "📞 Urgent call!", body: `"${hi("Hello")}! It's ${esc(firstName(c.exec))}. I've got a quick question and I need an answer in the next 30 seconds."`, yes: "Answer the phone", no: "Let it ring", bonus: EV_BONUS.call };
@@ -3475,6 +3498,7 @@ const views = {
         ${curRank() >= 3 || dealsList().length ? `<button class="btn ${openDeal() ? "red glow" : "ghost"}" data-act="inbox"><span>📧 Inbox</span><small>${openDeal() ? "1 new message" : "deals between your clients"}</small></button>` : ""}
         <button class="btn ghost" data-act="shop"><span>🛍️ Shop</span><small>${A(save.cash)}</small></button>
         <button class="btn ghost" data-act="clients"><span>Your clients</span><small>${activeClients().length} active</small></button>
+        <button class="btn ghost" data-act="cards"><span>🗂️ Business cards</span><small>${Object.keys(clientsMap()).length} collected</small></button>
         <button class="btn ghost" data-act="badges"><span>Badges</span><small>${Object.keys(save.badges).length}/${BADGES.length}</small></button>
         <button class="btn ghost" data-act="you"><span>Your profile</span><small>name and colour</small></button>
         <button class="btn ghost" data-act="ladder"><span>Career ladder</span></button>
@@ -3490,6 +3514,7 @@ const views = {
     <h2>Today's ${JOB()}</h2>
     ${ENG.office ? `<p>"${hi("Good morning")}! Today's client is ${esc(ENG.client.name)}. You don't need to go anywhere: files come to <b>your computer</b>, visitors and candidates will come to <b>your office</b>, and calls come through as <b>video calls</b>. ${ENG.list.some(t => t.auto) ? "Ravi is already counting the stock for you. " : ""}Anything with legwork, send to your team from the task list, then review what they hand back. Come and see me when the day's done."</p>` : curRank() === 4 ? `<p class="clientline">👥 <b>You're a Manager now.</b> Open the task list (${isTouch ? "tap Tasks" : "press T"}) and press <b>Send</b> to hand up to 2 tasks to your team. They'll bring the work back for you to review, so you walk less.</p>` : ""}
     ${isStudent() ? `<p>"${hi("Welcome")}! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"${hi()}! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
+    ${ENG.legend ? `<p class="clientline legend">👑 <b>Legendary client!</b> ${esc(ENG.client.name)} is one of the biggest names in the city. This job pays 25% more XP.</p>` : ""}
     ${clientBriefLine()}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
     <p class="label" style="color:var(--ink-dim)">${isTouch ? "Tap Tasks" : "Press T"} any time to see this list again.</p>
@@ -3578,9 +3603,9 @@ const views = {
       : `<p class="instr">One try per question. Use the calculator if you need it.</p><div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="ivsubmit" ${iv.sel === null ? "disabled" : ""}>Lock in</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
-  event: () => { const e = eventCard(); return `<article class="paper memo fadein"><div class="letterhead"><div class="co">Surprise!</div><div class="label">Bonus +${e.bonus} pts</div></div>
+  event: () => { const e = eventCard(); return `<article class="paper memo fadein"><div class="letterhead"><div class="co">${e.tut ? esc(e.tut) : "Surprise!"}</div><div class="label">Bonus +${e.bonus} pts</div></div>
     <div class="npc-line"><div class="av" style="background:${e.col}">${esc(e.av)}</div><div><b>${esc(e.who)}</b><small style="display:block;color:var(--ink-dim)">${esc(e.role)}</small><h2 style="margin-top:6px">${e.h}</h2><p>${e.body}</p></div></div>
-    <div class="row-btns"><button class="btn red" data-act="evyes">${esc(e.yes)}</button><button class="btn plain" data-act="evno">${esc(e.no)}</button></div></article>`; },
+    <div class="row-btns"><button class="btn red" data-act="evyes">${esc(e.yes)}</button>${e.no ? `<button class="btn plain" data-act="evno">${esc(e.no)}</button>` : ""}</div></article>`; },
   call: () => {
     const c = state.call, ans = c.picked !== null, ok = c.picked === c.correct, cl = ENG.client;
     return `<section class="fadein"><article class="paper callcard">
@@ -3619,6 +3644,10 @@ const views = {
       : `<div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="dealsubmit" ${q.sel === null ? "disabled" : ""}>Send my advice</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
+  cards: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">🗂️ Business cards</div><div class="label">${Object.keys(clientsMap()).length} collected · ${Object.values(clientsMap()).filter(c => c.legend).length}/${LEGENDS.length} legendary</div></div>
+    <p style="margin-top:0">You get a card from every company you work for. Help a client grow into a big company and their card turns <b>rare</b>. About 1 in 12 new clients is <b>legendary</b>: they pay 25% more XP.</p>
+    ${Object.keys(clientsMap()).length ? cardsHTML() : "<p>No cards yet. Finish a job to get your first one.</p>"}
+    <button class="btn red" data-act="hub" style="margin-top:14px">Back</button></article>`,
   shop: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">🛍️ Shop</div><div class="label">You have ${A(save.cash)}</div></div>
     <p style="margin-top:0">Spend your salary on things for ${esc(WS_NAME[WS_OF(curRank())].toLowerCase())}. Everything you buy appears there when you walk around the office.</p>
     <div class="shop">${SHOP.map(it => { const own = save.owned[it.id], lock = !canPlace(it), afford = save.cash >= it.price; return `<div class="sitem ${own ? "own" : ""}"><span class="bi">${it.ic}</span><b>${esc(it.name)}</b><small>${esc(it.blurb)}</small>${own ? `<span class="tagok">Owned ✓${lock ? " · shows in your office" : ""}</span>` : lock ? `<button class="btn plain" disabled>Needs your own office</button>` : `<button class="btn ${afford ? "red" : "plain"}" data-act="buy" data-id="${it.id}" ${afford ? "" : "disabled"}>${A(it.price)}</button>`}</div>`; }).join("")}</div>
@@ -3690,6 +3719,7 @@ document.addEventListener("click", e => {
     case "evno": declineEvent(); break;
     case "callopt": if (state.call && state.call.picked === null) { state.call.sel = +id; Audio.play("click"); renderUI(); startCallTimer(); } break;
     case "callsubmit": if (state.call && state.call.sel !== null) finishCall(state.call.sel); break;
+    case "cards": Audio.play("paper"); state.ui = "cards"; renderUI(); ov.scrollTop = 0; break;
     case "clients": Audio.play("paper"); state.ui = "clients"; renderUI(); ov.scrollTop = 0; break;
     case "inbox": Audio.play("paper"); state.dealQ = null; state.ui = "inbox"; renderUI(); ov.scrollTop = 0; break;
     case "dealopt": if (state.dealQ && state.dealQ.picked === null) { state.dealQ.sel = +id; Audio.play("click"); renderUI(); } break;

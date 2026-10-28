@@ -1,5 +1,6 @@
 /* ============================== CLIENTS WHO REMEMBER YOU, THE RIVAL FIRM, DEALS BETWEEN COMPANIES ============================== */
 const RIVAL = "Falcon Advisory";
+const LEGENDS = ["Burj Crown Holdings", "Royal Pearl Group", "Golden Falcon Ventures", "Emerald Sands Resorts", "Atlas Sky Airlines", "Sultan & Sons Trading"];
 const SIZE_NAMES = ["Start-up", "Small business", "Growing company", "Big company", "Market leader"];
 if (!save.clientsBy) save.clientsBy = { casual: {}, student: {} };
 if (!save.dealsBy) save.dealsBy = { casual: [], student: [] };
@@ -22,7 +23,16 @@ function chooseClient(eng, h, r) {
   }
   const taken = new Set(Object.keys(clientsMap()));
   for (let k = 0; k < 30 && taken.has(eng.client.name); k++) eng.client.name = h.pick(NAMES) + " " + INDUSTRIES.find(i => i.ind === eng.client.ind).sfx;
+  const freeLegends = LEGENDS.filter(n => !taken.has(n));
+  if (curRank() >= 1 && freeLegends.length && r() < .08) { eng.client.name = h.pick(freeLegends); eng.legend = true; eng.client.stripe = "#c9a24a"; }
   if (curRank() >= 2 && r() < .35) eng.pitch = true;
+}
+BADGES.push({ id: "legend", ic: "👑", name: "Legendary client", how: "Work for a legendary client" }, { id: "cards10", ic: "🗂️", name: "Networker", how: "Collect 10 business cards" });
+for (const b of BADGES) BADGE[b.id] = b;
+const rarityOf = c => c.legend ? "legendary" : c.size >= 3 ? "rare" : "common";
+function cardsHTML() {
+  const all = Object.values(clientsMap()).sort((a, b) => (b.legend - a.legend) || b.size - a.size || b.trust - a.trust);
+  return `<div class="cards">${all.map(c => { const ind = INDUSTRIES[c.ind] || INDUSTRIES[0], ex = EXECS[c.ex] || EXECS[0], rar = rarityOf(c); return `<div class="bcard ${rar} ${c.status === "rival" ? "lost" : ""}" style="--stripe:${c.legend ? "#c9a24a" : ind.stripe}"><div class="bc-top"><b>${esc(c.name)}</b><span class="rar">${rar}</span></div><div class="bc-mid"><span>${esc(ex[0])}</span><small>${esc(ind.ind)}</small></div><div class="bc-foot"><span>Trust ${c.trust}</span><span>${SIZE_NAMES[c.size]}</span>${c.status === "rival" ? `<span>with ${RIVAL}</span>` : ""}</div></div>`; }).join("")}</div>`;
 }
 function clientRecord(eng) {
   return clientsMap()[eng.client.name];
@@ -38,7 +48,7 @@ function clientBriefLine() {
 function updateClient(eng, pct) {
   if (eng.daily) return null;
   const map = clientsMap(); let c = map[eng.client.name], out = { name: eng.client.name };
-  if (!c) { c = map[eng.client.name] = { name: eng.client.name, ind: INDUSTRIES.findIndex(i => i.ind === eng.client.ind), ex: EXECS.findIndex(e => e[0] === eng.client.exec), palette: eng.palette, trust: 50, jobs: 0, size: sizeOf(50), status: "active" }; out.isNew = true; }
+  if (!c) { c = map[eng.client.name] = { met: today(), legend: !!eng.legend, name: eng.client.name, ind: INDUSTRIES.findIndex(i => i.ind === eng.client.ind), ex: EXECS.findIndex(e => e[0] === eng.client.exec), palette: eng.palette, trust: 50, jobs: 0, size: sizeOf(50), status: "active" }; out.isNew = true; }
   const before = c.trust, d = pct >= 85 ? 15 : pct >= 65 ? 8 : pct >= 45 ? -5 : -15;
   c.jobs++; c.grew = false;
   if (eng.pitch) {
@@ -47,7 +57,7 @@ function updateClient(eng, pct) {
   } else c.trust = Math.max(0, Math.min(100, c.trust + d));
   const sz = sizeOf(c.trust); if (sz > c.size) { c.grew = true; out.grew = SIZE_NAMES[sz]; } c.size = Math.max(c.size, sz);
   if (c.trust < 20 && c.status === "active") { c.status = "rival"; out.left = true; }
-  if (c.trust >= 80) award("loyal");
+  if (c.trust >= 80) award("loyal"); if (c.legend) award("legend"); if (Object.keys(map).length >= 10) award("cards10");
   Object.assign(out, { before, after: c.trust, label: trustLabel(c.trust), loyalBonus: before >= 80 && !eng.pitch });
   return out;
 }
