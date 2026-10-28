@@ -88,7 +88,8 @@ function newEngagement(daily) {
   const free = {}; for (const [id, s] of Object.entries(STATIONS)) free[id] = s.cap || 1;
   const order = h.shuf(Object.keys(STATIONS));
   for (const t of list) {
-    for (const k of KIND_AT[TPL[t.tpl].kind]) { const st = order.find(id => STATIONS[id].kind === k && free[id] > 0 && !(k === "npc" && id === "ravi" && free.exec > 0)); if (st) { t.st = st; free[st]--; break; } }
+    const kd = TPL[t.tpl].kind, ord = (kd === "mcq" || kd === "flag") && h.ri(0, 9) < 4 ? [...KIND_AT[kd]].reverse() : KIND_AT[kd];
+    for (const k of ord) { const st = order.find(id => STATIONS[id].kind === k && free[id] > 0 && !(k === "npc" && id === "ravi" && free.exec > 0)); if (st) { t.st = st; free[st]--; break; } }
     if (!t.st) { const st = order.find(id => ["desk", "files"].includes(STATIONS[id].kind) && free[id] > 0); t.st = st; free[st]--; }
   }
   const capMajor = isStudent() ? save.major : Object.entries(majCount).sort((a, b) => b[1] - a[1])[0][0];

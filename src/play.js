@@ -89,7 +89,7 @@ const isTouch = matchMedia("(pointer: coarse)").matches || "ontouchstart" in win
 let joy = null, lookTouch = null, bob = 0, stepT = 0, near = null, moved = 0, promptKey = "";
 const R = .3;
 const blocked = (x, z) => blockedR(x, z, R) || CW.some(c => c.path && Math.hypot(c.x - x, c.z - z) < .55);
-const paused = () => state.ui !== null;
+const paused = () => state.ui !== null || !!state.cam;
 addEventListener("keydown", e => {
   if (paused()) { if (e.key === "Escape" && ENG && ["task", "overview", "note"].includes(state.ui)) closeUI(); return; }
   keys[e.code] = true;
@@ -249,8 +249,9 @@ function frame(now) {
   gl.viewport(0, 0, w, h); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   const p = state.player, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const by = reduce ? 0 : Math.sin(bob) * .04, bx = reduce ? 0 : Math.cos(bob * .5) * .022;
-  const ex = p.x + Math.cos(p.yaw) * bx, ez = p.z - Math.sin(p.yaw) * bx, ey = 1.65 + by;
-  const Pm = persp(1.15, w / h, .1, 90), V = mul(rotX(-p.pitch), mul(rotY(-p.yaw), trans(-ex, -ey, -ez)));
+  const cp = state.cam ? camNow(now) : null;
+  const ex = cp ? cp.x : p.x + Math.cos(p.yaw) * bx, ez = cp ? cp.z : p.z - Math.sin(p.yaw) * bx, ey = cp ? cp.y : 1.65 + by;
+  const Pm = persp(1.15, w / h, .05, 90), V = mul(rotX(-(cp ? cp.pitch : p.pitch)), mul(rotY(-(cp ? cp.yaw : p.yaw)), trans(-ex, -ey, -ez)));
   PV = mul(Pm, V);
   gl.uniformMatrix4fv(loc.uP, false, Pm); gl.uniformMatrix4fv(loc.uV, false, V); gl.uniform3f(loc.uFog, .1, .13, .2); gl.uniform3f(loc.uEye, ex, ey, ez);
   gl.uniform1f(loc.uAlpha, 1); gl.disable(gl.BLEND); gl.depthMask(true);
@@ -436,23 +437,24 @@ function interact() {
     if (ENG.capT && !isDone("cap")) return openTask("cap");
     return finishEngagement();
   }
-  const ts = stationTasks(it.id), pend = ts.find(t => !isDone(t.key));
-  Audio.play(it.id === "exec" ? "knock" : "paper");
+  const ts = stationTasks(it.id), pend = ts.find(t => !isDone(t.key)), tk = pend || ts[ts.length - 1];
   if (save.coach === 2) { save.coach = 3; persist(); }
-  openTask((pend || ts[ts.length - 1]).key);
+  if (isPC(tk)) return startZoomIn(it.id, tk.key);
+  Audio.play(it.id === "exec" ? "knock" : "paper");
+  openTask(tk.key);
 }
 function orderCoffee(c) {
   Audio.play("click");
   if (state.coffee === "fetch" && evOf()) { evOf().status = "carry"; syncEv(); rebuildInter(); c.say = `Here you go${myName() ? ", " + myName() : ""}! Careful, it's hot.`; c.sayT = 3.6; toast("☕ Got the coffees. Take them to Sara in the meeting room."); guideT = 0; renderHud(); return; }
   c.say = greetLine(c); c.sayT = 3.2; state.hadCoffee = true; toast(`☕ ${["Karak chai", "Flat white", "Arabic coffee", "Fresh mango juice"][Math.floor(Math.random() * 4)]}, on the house.`); if (!ENG) renderHud();
 }
-function openTask(key) { state.task = key; state.sel = null; state.picks = new Set(); state.cls = {}; state.msg = ""; state.hintOpen = false; state.mentor = ""; openUI("task"); }
+function openTask(key) { state.task = key; state.sel = null; state.picks = new Set(); state.cls = {}; state.msg = ""; state.hintOpen = false; state.mentor = ""; pcOpened(taskByKey(key)); openUI("task"); }
 function openUI(ui) {
   state.ui = ui; if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) {} }
   for (const k in keys) keys[k] = false; joy = null; stick.hidden = true;
   renderUI(); updatePrompt(); ov.scrollTop = 0;
 }
-function closeUI() { state.ui = null; renderUI(); rebuildInter(); updatePrompt(); if (ENG && !ENG.done) maybeFireEvent(); }
+function closeUI() { state.ui = null; clearTimeout(state.pingT); state.ping = null; renderUI(); rebuildInter(); updatePrompt(); if (state.pcFrom) startZoomOut(); else if (ENG && !ENG.done) maybeFireEvent(); }
 const taskByKey = k => k === "practice" ? state.practiceTask : k === "cap" ? ENG.capT : ENG.list[+k];
 function startPractice(fromKey) {
   const src = taskByKey(fromKey), sd = (Math.random() * 2 ** 31) | 0;
@@ -473,7 +475,7 @@ function submitTask() {
     else { res.wrongOpts.push(state.sel); if (res.attempts < maxTries) { state.msg = "Not quite. That answer is crossed out. Read the tip and try again."; state.sel = null; state.hintOpen = true; Audio.play("bad"); storeEng(); return renderUI(); } }
     res.given = state.sel;
   } else if (kind === "calc" || kind === "count") {
-    const v = parseNum(document.getElementById("ans").value); if (v === null) { state.msg = "Type a number first."; return renderUI(); }
+    const raw = document.getElementById("ans").value.trim(), v = readAnswer(); if (v === null) { state.msg = raw.startsWith("=") ? "That formula doesn't work. Check the cell names, e.g. =B2*B3." : "Type a number first."; return renderUI(); }
     const tol = d.tol ?? Math.max(.5, Math.abs(d.answer) * .005);
     const ok = Math.abs(v - d.answer) <= tol || (d.alt !== undefined && Math.abs(v - d.alt) <= tol) || (d.absOk && Math.abs(Math.abs(v) - Math.abs(d.answer)) <= tol);
     res.attempts = (res.attempts || 0) + 1; res.tries = [...(res.tries || []), v]; res.given = v;

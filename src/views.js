@@ -148,6 +148,7 @@ const views = {
   },
   task: () => {
     const tk = taskByKey(state.task), d = tk.d, kind = tk.T.kind, res = resOf(tk.key), done = res.status === "done", prac = tk.key === "practice", choice = kind === "mcq" || d.asChoice;
+    if (isPC(tk)) return pcView(tk);
     const who = tk.key === "cap" ? "Sara" : tk.st === "exec" ? ENG.client.exec : tk.st === "ravi" ? "Ravi" : null;
     let input = "";
     if (!done) {
@@ -284,8 +285,9 @@ function renderUI() {
   if (!ENG) ensureHQWorld();
   renderHud();
   if (!["task", "interview", "call", "inbox", "board"].includes(state.ui) && calc.open) toggleCalc(false);
-  if (!state.ui) { ov.hidden = true; ov.innerHTML = ""; return; }
-  ov.hidden = false; ov.innerHTML = `<div class="ov-inner">${views[state.ui]()}</div>`;
+  if (!state.ui) { document.body.classList.remove("pcmode"); ov.hidden = true; ov.innerHTML = ""; return; }
+  const pcm = state.ui === "task" && isPC(taskByKey(state.task)); document.body.classList.toggle("pcmode", pcm);
+  ov.hidden = false; ov.innerHTML = pcm ? views[state.ui]() : `<div class="ov-inner">${views[state.ui]()}</div>`;
   if (state.ui === "report") countUp();
   if (state.ui === "task") { const a = document.getElementById("ans"); if (a && !isTouch && !calc.open) a.focus({ preventScroll: true }); }
   if (!["task", "interview", "call", "inbox", "board"].includes(state.ui) && calc.open) toggleCalc(false); else renderCalc();
@@ -363,7 +365,8 @@ document.addEventListener("click", e => {
     case "close": Audio.play("paper"); closeUI(); break;
     case "opt": state.sel = +id; Audio.play("click"); renderUI(); break;
     case "flagrow": { const i = +id; state.picks.has(i) ? (state.picks.delete(i), Audio.play("unstamp")) : (state.picks.add(i), Audio.play("stamp")); renderUI(); break; }
-    case "submit": submitTask(); break;
+    case "submit": case "submitpc": submitTask(); break;
+    case "cell": { state.cell = id; Audio.play("click"); ov.querySelectorAll(".grid .sel").forEach(x => x.classList.remove("sel")); t.classList.add("sel"); const nm = ov.querySelector(".fxbar .nm"), fv = ov.querySelector(".fv"); if (nm) nm.textContent = id; if (fv) fv.textContent = t.textContent; break; }
     case "calc": toggleCalc(); renderUI(); break;
     case "hint": { const res = resOf(taskByKey(state.task).key); if (!res.hint && state.task !== "practice") { res.hint = true; storeEng(); } state.hintOpen = true; Audio.play("paper"); renderUI(); break; }
     case "practice": Audio.play("paper"); startPractice(id); break;
@@ -387,7 +390,7 @@ ov.addEventListener("submit", e => {
 function boot() {
   if (isTouch) document.body.classList.add("touch");
   if (!gl) { document.body.insertAdjacentHTML("beforeend", `<div id="nogl"><div><h2 class="display" style="font-size:40px">3D isn't available</h2><p style="color:var(--chalk-dim)">This browser or device couldn't start WebGL. Try a recent version of Chrome, Edge, Safari or Firefox.</p></div></div>`); return; }
-  initGL(); ensureHQWorld(true);
+  initGL(); ensureHQWorld(true); pcInit();
   renderUI(); updatePrompt();
   requestAnimationFrame(frame);
 }
