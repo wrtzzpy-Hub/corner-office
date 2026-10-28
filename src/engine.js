@@ -541,7 +541,7 @@ const trans = (x, y, z) => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
 const I4 = trans(0, 0, 0);
 
 /* ============================== NAVIGATION ============================== */
-const DOORS = { meet: { x: 6, in: [6, 10.9], out: [6, 13.6] }, fin: { x: 18, in: [18, 10.9], out: [18, 13.6] }, exec: { x: 30, in: [30, 10.9], out: [30, 13.6] }, office: { x: 39, in: [39, 10.9], out: [39, 13.6] }, corner: { x: 45, in: [45, 10.9], out: [45, 13.6] }, lobby: { x: 6, in: [6, 17.3], out: [6, 14.5] }, stock: { x: 22, in: [22, 17.8], out: [22, 14.5] }, cafe: { x: 41.5, in: [41.5, 17.3], out: [41.5, 14.5] } };
+const DOORS = { meet: { x: 6, in: [6, 10.9], out: [6, 13.6] }, fin: { x: 18, in: [18, 10.9], out: [18, 13.6] }, exec: { x: 30, in: [30, 10.9], out: [30, 13.6] }, office: { x: 39, in: [39, 10.9], out: [39, 14.3] }, corner: { x: 45, in: [45, 10.9], out: [45, 14.3] }, lobby: { x: 6, in: [6, 17.3], out: [6, 14.5] }, stock: { x: 22, in: [22, 17.8], out: [22, 14.5] }, cafe: { x: 41.5, in: [41.5, 17.3], out: [41.5, 14.5] } };
 const HUBS = { fin: [17.75, 6.2], meet: [10.6, 9.2], exec: [27.2, 8.6], stock: [24, 19.2] };
 const blockedR = (x, z, r) => colliders.some(c => x > c[0] - r && x < c[2] + r && z > c[1] - r && z < c[3] + r);
 function segBlocked(a, b) { const d = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let s = .4; s < d - .2; s += .1) { const t = s / d; if (blockedR(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, .3)) return true; } return false; }
