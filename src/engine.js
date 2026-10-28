@@ -55,6 +55,9 @@ function buildTextures() {
     [["#f6e27a", 880, 40], ["#f6b6c8", 905, 190], ["#9fe0c1", 880, 330]].forEach(([c, x, y]) => { g.save(); g.translate(x, y); g.rotate(rr(-.08, .08)); g.fillStyle = c; g.fillRect(0, 0, 110, 110); g.fillStyle = "rgba(0,0,0,.35)"; for (let k = 0; k < 4; k++) g.fillRect(12, 22 + k * 20, rr(50, 85), 4); g.restore(); });
     g.strokeStyle = "rgba(0,0,0,.05)"; g.lineWidth = 30; g.beginPath(); g.moveTo(500, 470); g.lineTo(700, 450); g.stroke();
   });
+  mkTex("menu", 512, 256, (g, w, h) => { g.fillStyle = "#1d2420"; g.fillRect(0, 0, w, h); speckle(g, w, h, 6000, .08, 1.5); g.fillStyle = "#f3ead6"; g.font = `bold 34px ${SERIF}`; g.textAlign = "center"; g.fillText("The Ledger Café", w / 2, 44); g.fillStyle = "#c9a24a"; g.fillRect(w / 2 - 120, 56, 240, 2); g.textAlign = "left"; g.font = `21px ${SANS}`;
+    [["Karak chai", "8"], ["Flat white", "14"], ["Arabic coffee", "10"], ["Fresh juice", "16"], ["Date cake", "12"], ["Falafel wrap", "18"]].forEach(([n, pr], i) => { const y = 90 + i * 28; g.fillStyle = "#f3ead6"; g.fillText(n, 50, y); g.textAlign = "right"; g.fillStyle = "#e9c46a"; g.fillText("AED " + pr, w - 50, y); g.textAlign = "left"; }); });
+  mkTex("cert", 256, 256, (g, w, h) => { g.fillStyle = "#fbf7ec"; g.fillRect(0, 0, w, h); g.strokeStyle = "#c9a24a"; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20); g.fillStyle = "#1b2a40"; g.font = `bold 20px ${SERIF}`; g.textAlign = "center"; g.fillText("Certificate", w / 2, 78); g.font = `15px ${SERIF}`; g.fillText("of Promotion", w / 2, 104); g.fillStyle = "rgba(0,0,0,.25)"; for (let k = 0; k < 3; k++) g.fillRect(50, 130 + k * 18, w - 100, 3); g.fillStyle = "#c8372d"; g.beginPath(); g.arc(w / 2, 212, 16, 0, 7); g.fill(); });
   mkTex("skyline", 1024, 512, (g, w, h) => {
     const sky = g.createLinearGradient(0, 0, 0, h * .8); sky.addColorStop(0, "#081430"); sky.addColorStop(.45, "#1f3266"); sky.addColorStop(.75, "#a2546a"); sky.addColorStop(1, "#f0a35e"); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${rr(.2, .7)})`; g.fillRect(rr(0, w), rr(0, h * .35), 1.4, 1.4); }
@@ -161,7 +164,8 @@ const PALETTES = [
   { meet: "#5a4652", fin: "#3f5464", wall: "#f3efe9", accent: "#c79a55", sign: "#3a2a36", rug: "#3a3250" },
   { meet: "#3f5240", fin: "#57534a", wall: "#efede6", accent: "#bfa05a", sign: "#2a3a2c", rug: "#5a3a24" }];
 let ROOMS = [];
-const roomKey = (x, z) => z < 12 ? (x < 12 ? "meet" : x < 24 ? "fin" : "exec") : z < 16 ? "corr" : (x < 12 ? "lobby" : "stock");
+const roomKey = (x, z) => z < 12 ? (x < 12 ? "meet" : x < 24 ? "fin" : x < 36 ? "exec" : x < 42 ? "office" : "corner") : z < 16 ? "corr" : (x < 12 ? "lobby" : x < 36 ? "stock" : "cafe");
+const WORLD_W = 48;
 const roomAt = (x, z) => ROOMS.find(r => r.key === roomKey(x, z)) || ROOMS[0];
 
 function buildWorld(cfg) {
@@ -171,29 +175,36 @@ function buildWorld(cfg) {
     { key: "meet", name: "Meeting room", x0: 0, z0: 0, x1: 12, z1: 12, surface: "carpet" },
     { key: "fin", name: "Finance floor", x0: 12, z0: 0, x1: 24, z1: 12, surface: "carpet" },
     { key: "exec", name: "Executive suite", x0: 24, z0: 0, x1: 36, z1: 12, surface: "tile" },
-    { key: "corr", name: "Corridor", x0: 0, z0: 12, x1: 36, z1: 16, surface: "tile" },
+    { key: "office", name: "Private office", x0: 36, z0: 0, x1: 42, z1: 12, surface: "carpet" },
+    { key: "corner", name: "Corner office", x0: 42, z0: 0, x1: 48, z1: 12, surface: "tile" },
+    { key: "corr", name: "Corridor", x0: 0, z0: 12, x1: 48, z1: 16, surface: "tile" },
+    { key: "cafe", name: "Café", x0: 36, z0: 16, x1: 48, z1: 24, surface: "tile" },
     { key: "lobby", name: "Lobby", x0: 0, z0: 16, x1: 12, z1: 24, surface: "tile" },
     { key: "stock", name: "Stockroom", x0: 12, z0: 16, x1: 36, z1: 24, surface: "concrete" }];
   // floors
   box(6, -.1, 6, 12, .1, 12, P.meet, { top: "carpet", topTile: 1, flat: true, skip: ["-y"] });
   box(18, -.1, 6, 12, .1, 12, P.fin, { top: "carpet", topTile: 1, flat: true, skip: ["-y"] });
   box(30, -.1, 6, 12, .1, 12, "#ffffff", { top: "woodfloor", topTile: 2.6, flat: true, skip: ["-y"] });
-  box(18, -.1, 14, 36, .1, 4, "#ffffff", { top: "stone", topTile: 1.8, flat: true, skip: ["-y"] });
+  box(24, -.1, 14, 48, .1, 4, "#ffffff", { top: "stone", topTile: 1.8, flat: true, skip: ["-y"] });
+  box(39, -.1, 6, 6, .1, 12, cfg.hq && cfg.hq.ws === "office" ? cfg.hq.color : "#4a4f5c", { top: "carpet", topTile: 1, flat: true, skip: ["-y"] });
+  box(45, -.1, 6, 6, .1, 12, "#ffffff", { top: "woodfloor", topTile: 2.2, flat: true, skip: ["-y"] });
+  box(42, -.1, 20, 12, .1, 8, "#ffffff", { top: "woodfloor", topTile: 1.6, flat: true, skip: ["-y"] });
   box(6, -.1, 20, 12, .1, 8, "#ffffff", { top: "marble", topTile: 2.2, flat: true, skip: ["-y"] });
   box(24, -.1, 20, 24, .1, 8, "#ffffff", { top: "concrete", topTile: 3, flat: true, skip: ["-y"] });
   // ceiling and lights
-  box(18, WALL_H, 12, 36, .1, 24, "#ffffff", { tex: "ceiling", tile: .6, flat: true });
-  for (let x = 3; x < 36; x += 6) for (const z of [3, 7.5, 18.5, 22]) { if (x < 12 && z > 16) continue; box(x, WALL_H - .03, z, 1.4, .03, .6, "#fffbea", { em: 1, flat: true }); }
-  for (let x = 2.5; x < 36; x += 4) box(x, WALL_H - .03, 14, 1.8, .03, .18, "#fffbea", { em: 1, flat: true });
+  box(24, WALL_H, 12, 48, .1, 24, "#ffffff", { tex: "ceiling", tile: .6, flat: true });
+  for (let x = 3; x < 48; x += 6) for (const z of [3, 7.5, 18.5, 22]) { if (x < 12 && z > 16) continue; box(x, WALL_H - .03, z, 1.4, .03, .6, "#fffbea", { em: 1, flat: true }); }
+  for (let x = 2.5; x < 48; x += 4) box(x, WALL_H - .03, 14, 1.8, .03, .18, "#fffbea", { em: 1, flat: true });
   box(6, WALL_H - .05, 20, 6, .05, .25, "#fffbea", { em: 1, flat: true }); box(6, WALL_H - .05, 20, .25, .05, 5, "#fffbea", { em: 1, flat: true });
 
   // walls: [x1,z1,x2,z2,type]
-  const W = [[0, 0, 36, 0, "win"], [0, 24, 12, 24, "solid"], [12, 24, 36, 24, "solid"], [0, 0, 0, 12, "solid"], [0, 12, 0, 24, "solid"], [36, 0, 36, 12, "win"], [36, 12, 36, 24, "solid"],
+  const W = [[0, 0, 48, 0, "win"], [0, 24, 12, 24, "solid"], [12, 24, 36, 24, "solid"], [36, 24, 48, 24, "solid"], [0, 0, 0, 12, "solid"], [0, 12, 0, 24, "solid"], [36, 0, 36, 12, "solid"], [42, 0, 42, 12, "solid"], [48, 0, 48, 12, "win"], [48, 12, 48, 24, "solid"], [36, 16, 36, 24, "solid"],
+    [36, 12, 38, 12, "wood"], [40, 12, 44, 12, "wood"], [46, 12, 48, 12, "wood"], [36, 16, 40, 16, "glass"], [43, 16, 48, 16, "glass"],
     [0, 12, 5, 12, "glass"], [7, 12, 12, 12, "glass"], [12, 12, 17, 12, "glass"], [19, 12, 24, 12, "glass"], [24, 12, 29, 12, "wood"], [31, 12, 36, 12, "wood"],
     [12, 0, 12, 12, "solid"], [24, 0, 24, 12, "solid"], [0, 16, 3, 16, "solid"], [9, 16, 12, 16, "solid"], [12, 16, 20, 16, "solid"], [24, 16, 36, 16, "solid"], [12, 16, 12, 24, "solid"]];
   for (const [x1, z1, x2, z2, type] of W) {
     const mx = (x1 + x2) / 2, mz = (z1 + z2) / 2, hz = z1 === z2, sx = hz ? x2 - x1 + .2 : .204, sz = hz ? .2 : z2 - z1 + .16;
-    const stock = (mz === 24 && mx > 12) || (mx === 12 && mz > 16) || (mx === 36 && mz > 12);
+    const stock = (mz === 24 && mx > 12 && mx < 36) || (mx === 12 && mz > 16) || (mx === 36 && mz > 16);
     if (type === "glass") {
       const prev = CUR; CUR = G; box(mx, .06, mz, x2 - x1, WALL_H - .06, .04, "#cfe3ee", { flat: true }); CUR = prev;
       colliders.push([mx - sx / 2, mz - .1, mx + sx / 2, mz + .1]);
@@ -218,9 +229,9 @@ function buildWorld(cfg) {
     if (axis === "x") { box((a0 + a1) / 2, .5, fixed + .1, a1 - a0, .05, .25, "#f4f2ee", { flat: true }); box((a0 + a1) / 2, 2.98, fixed + .05, a1 - a0, .06, .1, "#2b313a", { flat: true }); }
     else { box(fixed - .1, .5, (a0 + a1) / 2, .25, .05, a1 - a0, "#f4f2ee", { flat: true }); box(fixed - .05, 2.98, (a0 + a1) / 2, .1, .06, a1 - a0, "#2b313a", { flat: true }); }
   };
-  win("x", .1, 11.9, .11, "+z", .1); win("x", 12.1, 23.9, .11, "+z", .37); win("x", 24.1, 35.9, .11, "+z", .64); win("z", .1, 11.9, 35.89, "-x", .2);
+  win("x", .1, 11.9, .11, "+z", .1); win("x", 12.1, 23.9, .11, "+z", .37); win("x", 24.1, 35.9, .11, "+z", .64); win("x", 36.1, 41.9, .11, "+z", .91); win("x", 42.1, 47.9, .11, "+z", .18); win("z", .1, 11.9, 47.89, "-x", .2);
   // door frames and headers
-  [[5, 7, 12, "glass"], [17, 19, 12, "glass"], [29, 31, 12, "wood"], [3, 9, 16, "solid"], [20, 24, 16, "solid"]].forEach(([a, b, z, t]) => {
+  [[5, 7, 12, "glass"], [17, 19, 12, "glass"], [29, 31, 12, "wood"], [38, 40, 12, "wood"], [44, 46, 12, "wood"], [40, 43, 16, "glass"], [3, 9, 16, "solid"], [20, 24, 16, "solid"]].forEach(([a, b, z, t]) => {
     if (t === "glass") { box((a + b) / 2, 2.5, z, b - a, WALL_H - 2.5, .12, "#2b313a", { flat: true }); return; }
     box((a + b) / 2, 2.6, z, b - a - .004, WALL_H - 2.6, .196, t === "wood" ? "#6f4b31" : z === 16 && a === 20 ? "#b7bbbf" : P.wall, { tex: t === "wood" ? "wood" : "plaster", tile: 1.2 });
     box((a + b) / 2, 2.54, z, b - a + .16, .07, .26, P.accent, { flat: true, em: .15 }); [a, b].forEach(x => box(x, 0, z, .08, 2.6, .26, P.accent, { flat: true, em: .1 }));
@@ -241,8 +252,10 @@ function buildWorld(cfg) {
   /* ---- corridor ---- */
   panel("ticker", 30, 2.52, 15.88, 11, .24, "-z", 1, [0, 0, 2.75, 1]); box(30, 2.47, 15.93, 11.2, .34, .04, "#05080d", { flat: true });
   panel("ticker", 15.7, 2.52, 15.88, 7, .24, "-z", 1, [.4, 0, 2.15, 1]); box(15.7, 2.47, 15.93, 7.2, .34, .04, "#05080d", { flat: true });
-  artFrame(1.6, 1.3, 15.88, "-z", 1.1, .85); artFrame(10.5, 1.3, 15.88, "-z", 1.1, .85); artFrame(35.88, 1.3, 14, "-x", 1.4, 1);
-  bench(26.5, 15.45); plant(.6, 12.6, 0); plant(35.3, 12.6, 0); plant(12.6, 15.4, 0);
+  artFrame(1.6, 1.3, 15.88, "-z", 1.1, .85); artFrame(10.5, 1.3, 15.88, "-z", 1.1, .85); artFrame(47.88, 1.3, 14, "-x", 1.4, 1);
+  bench(26.5, 15.45); plant(.6, 12.6, 0); plant(47.3, 12.6, 0); plant(12.6, 15.4, 0); plant(35.4, 15.4, 0);
+  artFrame(35.88, 1.3, 6, "-x", 1.4, 1);
+  buildExtension(cfg, P);
   /* ---- meeting room ---- */
   solid(6, 0, 5.2, 5.8, .72, 2.2, "#1e2228", { top: "wood", topTile: 1.2, topColor: "#ffffff" });
   box(6, .72, 5.2, 6, .05, 2.4, "#ffffff", { tex: "wood", tile: 1.2 });
@@ -286,7 +299,92 @@ function buildWorld(cfg) {
   [[21.45, 20.8], [22.55, 20.8], [21.45, 22.0], [22.55, 22.0]].forEach(([x, z]) => box(x, 0, z, .12, .4, .4, "#111"));
   [[13.4, 18.6], [13.4, 19.4], [33.5, 17.8]].forEach(([x, z]) => { solid(x, 0, z, 1, .12, 1, "#a0835a", { tex: "wood", tile: .5 }); box(x, .12, z, .9, .7, .9, "#ffffff", { tex: "cardboard", fit: true }); });
   for (const n of Object.values(NPCS)) colliders.push([n.x - .3, n.z - .3, n.x + .3, n.z + .3]);
+  for (const c of activeCoworkers(cfg)) if (!c.path) colliders.push([c.x - .3, c.z - .3, c.x + .3, c.z + .3]);
 }
+
+/* ============================== EAST WING: OFFICES AND CAFÉ ============================== */
+const WS_OF = rk => rk === 0 ? "hot" : rk <= 2 ? "desk" : rk <= 5 ? "office" : "corner";
+const COWORKERS = [
+  { id: "omar", name: "Omar", role: "Analyst", mesh: "cwA_s", x: 22.6, z: 11.0, rot: Math.PI },
+  { id: "lina", name: "Lina", role: "Associate", mesh: "cwB_s", x: 15, z: 11.0, rot: Math.PI, notHQdesk: true },
+  { id: "rashid", name: "Rashid", role: "Senior Manager", mesh: "cwE_s", x: 39, z: 3.3, rot: 0, office: "office" },
+  { id: "layla", name: "Layla Haddad", role: "Managing Partner", mesh: "boss_s", x: 45, z: 3.25, rot: 0, office: "corner", hqOnly: true },
+  { id: "saeed", name: "Saeed", role: "Chairman", mesh: "cwD_s", x: 45, z: 3.25, rot: 0, office: "corner", clientOnly: true },
+  { id: "hamza", name: "Hamza", role: "Café", mesh: "barista", x: 45, z: 23.5, rot: Math.PI, barista: true },
+  { id: "dana", name: "Dana", role: "Marketing", mesh: "cwC_s", x: 37.45, z: 18.6, rot: Math.PI / 2 },
+  { id: "khalid2", name: "Faisal", role: "IT support", mesh: "cwD_s", x: 46.25, z: 18.8, rot: -Math.PI / 2 },
+  { id: "sami", name: "Sami", role: "Intern", mesh: "cwE", path: [[3.5, 14.5], [46, 14.5]], speed: 1.1 },
+  { id: "noura", name: "Noura", role: "Senior Associate", mesh: "cwC", path: [[13.4, 6.0], [21.8, 6.0]], speed: .9 },
+  { id: "ali", name: "Ali", role: "Stock team", mesh: "cwF", path: [[24.5, 18.3], [33.6, 18.3]], speed: .8 },
+];
+function activeCoworkers(cfg) {
+  const hq = cfg.hq, ws = hq ? hq.ws : null;
+  return COWORKERS.filter(c => !(c.hqOnly && !hq) && !(c.clientOnly && hq) && !(c.notHQdesk && hq && (ws === "hot" || ws === "desk")) && !(c.office && hq && c.office === ws));
+}
+let CW = [];
+function buildExtension(cfg, P) {
+  const hq = cfg.hq, ws = hq ? hq.ws : null, mine = k => ws === k;
+  CW = activeCoworkers(cfg).map(c => ({ ...c, base: c.rot ?? 0, rot: c.rot ?? 0, seg: 0, t: 0, x: c.path ? c.path[0][0] : c.x, z: c.path ? c.path[0][1] : c.z, say: "", sayT: 0, greeted: false }));
+  /* ---- private office ---- */
+  const rugC = mine("office") ? hq.color : P.rug;
+  box(39, .004, 5.2, 4, .01, 4.6, rugC, { tex: "fabric", tile: .8, flat: true });
+  solid(39, 0, 4.2, 2.0, .72, .9, "#2a221e", { tex: "wood", tile: 1 }); box(39, .72, 4.2, 2.2, .05, 1.0, "#ffffff", { tex: "wood", tile: 1.2 });
+  monitor(39.35, .77, 4.35, "-z", "chart2"); laptop(38.5, .77, 4.25); execChair(39, 3.3);
+  officeChair(38.4, 5.55, -1); officeChair(39.6, 5.55, -1);
+  solid(36.33, 0, 6.2, .45, 2.3, 3.2, "#4a301e", { tex: "wood", tile: 1.2, faces: { "+x": { tex: "books", em: .02 } } });
+  plant(41.4, .9, 1); plant(36.6, 11.3, 0);
+  if (mine("office")) {
+    for (let i = 0; i < hq.rank; i++) { const z = 1.6 + i * 1.05; box(41.9, 1.45, z, .03, .62, .82, "#1b1b1f", { flat: true }); panel("cert", 41.88, 1.5, z, .7, .52, "-x", .2); }
+    trophies(41.62, 9.4, hq.badges);
+    if (hq.rank >= 4) { panel("whiteboard", 41.85, .95, 7.2, 1.6, 1.0, "-x", .2); }
+    if (hq.rank >= 5) { sofa(40.6, 11.3, "-z", 1.6); }
+    box(39, .725, 3.82, .5, .07, .06, hq.color, { flat: true, em: .3 });
+  } else { artFrame(41.88, 1.3, 6.5, "-x", 1.4, 1); }
+  /* ---- corner office ---- */
+  const cRug = mine("corner") ? hq.color : P.rug;
+  box(45, .003, 5, 5, .01, 5.4, cRug, { tex: "fabric", tile: .8, flat: true }); box(45, .007, 5, 4.6, .01, 5, cRug, { tex: "fabric", tile: .8, flat: true, em: .03 });
+  solid(45, 0, 4.4, 2.6, .72, 1.1, "#1d1a18", { tex: "wood", tile: 1 }); box(45, .72, 4.4, 2.9, .06, 1.3, "#ffffff", { tex: "wood", tile: 1.2 }); box(45, .45, 4.96, 2.6, .04, .02, P.accent, { em: .4, flat: true });
+  monitor(44.5, .78, 4.55, "-z", "chart1"); monitor(45.3, .78, 4.55, "-z", "dash"); execChair(45, 3.25);
+  officeChair(44.2, 6.0, -1, "#3a2e29", "leather"); officeChair(45.8, 6.0, -1, "#3a2e29", "leather");
+  solid(42.33, 0, 3.5, .45, 2.5, 3.4, "#4a301e", { tex: "wood", tile: 1.2, faces: { "+x": { tex: "books", em: .02 } } });
+  sofa(46.7, 11.3, "-z", 1.8, true); cyl(46.7, 0, 10.0, .4, .4, "#1d1a18", { solid: true, capTex: "dmarble", capColor: "#ffffff", capTile: .8 });
+  cyl(43.2, 0, 10.6, .05, .9, "#c9a24a", { seg: 8 }); sph(43.2, 1.15, 10.6, .25, "#3a6fa8", { seg: 16, rings: 12 }); cyl(43.2, 0, 10.6, .25, .03, "#c9a24a", { seg: 14 });
+  plant(47.4, .9, 1); plant(42.7, 11.3, 0);
+  if (mine("corner")) {
+    trophies(42.62, 8.6, hq.badges, 2.4);
+    box(45, .78, 3.85, .7, .1, .07, "#c9a24a", { flat: true, em: .5 }); box(45, .79, 3.83, .5, .06, .01, hq.color, { flat: true, em: .4 });
+    if (hq.rank >= 7) { cyl(44.1, .78, 4.6, .09, .05, "#c9a24a", { seg: 12 }); cyl(44.1, .83, 4.6, .03, .2, "#c9a24a", { seg: 8 }); sph(44.1, 1.1, 4.6, .12, "#f2df63", { em: .4, seg: 12, rings: 8 }); }
+  }
+  /* ---- café ---- */
+  solid(44.8, 0, 22.7, 5.6, 1.0, .7, "#3a2a20", { tex: "wood", tile: .8 }); box(44.8, 1.0, 22.7, 5.8, .05, .85, "#ffffff", { tex: "marble", tile: 1 });
+  solid(42.05, 0, 23.2, .1, 1.0, 1.6, "#3a2a20", { tex: "wood", tile: .8 });
+  box(46.4, 1.05, 22.85, .6, .55, .45, "#9aa0a6", { tex: "metal", tile: .4 }); box(46.4, 1.35, 22.62, .45, .12, .02, "#1b1b1f", { flat: true }); box(46.25, 1.05, 22.55, .06, .2, .06, "#2b2b2e", { flat: true }); box(46.55, 1.05, 22.55, .06, .2, .06, "#2b2b2e", { flat: true });
+  [43.3, 43.6, 43.9].forEach((x, i) => cyl(x, 1.05, 22.6, .045, .1, ["#f4f1e8", "#c8372d", "#2f6db3"][i], { seg: 10 }));
+  box(44.4, 1.05, 22.6, .5, .22, .3, "#e8dcc4", { flat: true }); box(44.4, 1.27, 22.6, .5, .02, .3, "#c9a24a", { flat: true, em: .2 });
+  panel("menu", 45, 1.45, 23.88, 2.2, 1.3, "-z", .85); box(45, 1.4, 23.93, 2.3, 1.4, .04, "#111", { flat: true });
+  solid(36.55, 0, 23.25, .9, 1.9, .7, "#d6dade", { tex: "metal", tile: .5 }); box(36.55, .15, 22.89, .78, 1.6, .02, "#bfe6f2", { em: .45, flat: true });
+  for (let k = 0; k < 4; k++) [36.3, 36.55, 36.8].forEach((x, i) => box(x, .25 + k * .4, 22.95, .12, .26, .12, ["#e08a1e", "#3f9a6b", "#c8372d"][(i + k) % 3], { flat: true, em: .1 }));
+  [[38.4, 18.6], [38.4, 21.8], [45.4, 18.8]].forEach(([x, z]) => { cyl(x, 0, z, .05, .74, "#2b2b2e", { seg: 8 }); cyl(x, 0, z, .26, .03, "#2b2b2e", { seg: 14 }); cyl(x, .74, z, .45, .04, "#ffffff", { tex: "marble", tile: .6, seg: 20 }); colliders.push([x - .45, z - .45, x + .45, z + .45]); });
+  [[39.35, 18.6], [37.45, 21.8], [39.35, 21.8], [44.45, 18.8], [37.45, 18.6], [46.25, 18.8]].forEach(([x, z]) => { cyl(x, 0, z, .04, .46, "#4a4f57", { seg: 8 }); cyl(x, .46, z, .2, .05, "#6b3f22", { tex: "leather", tile: .3, seg: 14 }); });
+  cyl(38.6, .78, 18.4, .05, .1, "#f4f1e8", { seg: 10 }); cyl(45.2, .78, 18.9, .05, .1, "#f4f1e8", { seg: 10 }); cyl(45.6, .78, 18.7, .05, .12, "#e08a1e", { seg: 10 });
+  plant(47.4, 16.7, 1); plant(36.6, 16.7, 0); plant(47.4, 21.0, 0);
+  for (const x of [38.4, 45.4]) { cyl(x, 2.55, x < 40 ? 20.2 : 18.8, .01, .65, "#222", { seg: 4 }); cyl(x, 2.4, x < 40 ? 20.2 : 18.8, .22, .16, "#c9a24a", { r2: .06, seg: 14, em: .5 }); }
+  /* ---- your workspace on the Finance floor (HQ, Intern to Associate) ---- */
+  if (mine("hot")) { box(15.3, .775, 10.4, .12, .005, .12, "#f2df63", { flat: true, em: .3 }); }
+  if (mine("desk")) {
+    box(15, .775, 9.95, .5, .09, .05, hq.color, { flat: true, em: .35 }); box(15, .79, 9.925, .42, .05, .01, "#fbfaf4", { flat: true, em: .3 });
+    cyl(14.2, .775, 10.6, .1, .1, hq.color, { seg: 12 }); 
+    if (hq.rank >= 2) { cyl(15.8, .77, 10.6, .1, .14, "#2b2b2e", { seg: 10 }); sph(15.8, 1.0, 10.6, .15, "#ffffff", { tex: "leaves", seg: 10, rings: 6 }); box(14.0, .775, 10.15, .2, .16, .03, "#1b1b1f", { flat: true }); }
+  }
+}
+function trophies(x, z, n, span = 2.6) {
+  colliders.push([x - .2, z - span / 2, x + .2, z + span / 2]);
+  box(x, 1.2, z, .32, .04, span, "#4a301e", { tex: "wood", tile: .6 }); box(x, 1.75, z, .32, .04, span, "#4a301e", { tex: "wood", tile: .6 });
+  const k = Math.min(16, n || 0);
+  for (let i = 0; i < k; i++) { const row = i < 8 ? 0 : 1, j = i % 8, zz = z - span / 2 + .18 + j * (span - .36) / 7, y = row ? 1.79 : 1.24, gold = i % 3 ? "#c9a24a" : "#d9dde2";
+    cyl(x, y, zz, .05, .03, "#2b2b2e", { seg: 8 }); cyl(x, y + .03, zz, .015, .1, gold, { seg: 6 }); cyl(x, y + .13, zz, .05, .1, gold, { r2: .07, seg: 10, em: .15 }); }
+}
+
 const G = {}; // glass geometry goes in its own bucket set
 function plant(x, z, big) {
   cyl(x, 0, z, big ? .3 : .24, big ? .55 : .42, "#2b2b2e", { r2: big ? .26 : .21, seg: 16, solid: true, capColor: "#3b2a1e" });
@@ -323,9 +421,10 @@ function rack(x0, x1, z, bay, island) {
 /* ============================== PEOPLE ============================== */
 function person(o) {
   CUR = {}; const skin = o.skin;
-  [-1, 1].forEach(s => { box(s * .1, 0, .03, .13, .08, .27, "#16181c", { flat: true }); });
-  if (o.robe) { cyl(0, .06, 0, .27, 1.4, o.robe, { r2: .22, sz: .75, seg: 18 }); }
-  else { [-1, 1].forEach(s => cyl(s * .1, .07, 0, .075, .82, o.pants, { r2: .085, seg: 12 })); cyl(0, .82, 0, .19, .12, o.pants, { r2: .2, sz: .7, seg: 16 }); }
+  if (!o.sit) [-1, 1].forEach(s => { box(s * .1, 0, .03, .13, .08, .27, "#16181c", { flat: true }); });
+  if (o.robe) { if (o.sit) cyl(0, .8, 0, .25, .66, o.robe, { r2: .22, sz: .75, seg: 18 }); else cyl(0, .06, 0, .27, 1.4, o.robe, { r2: .22, sz: .75, seg: 18 }); }
+  else if (!o.sit) { [-1, 1].forEach(s => cyl(s * .1, .07, 0, .075, .82, o.pants, { r2: .085, seg: 12 })); cyl(0, .82, 0, .19, .12, o.pants, { r2: .2, sz: .7, seg: 16 }); }
+  else cyl(0, .82, 0, .19, .12, o.pants, { r2: .2, sz: .7, seg: 16 });
   cyl(0, .9, 0, o.robe ? .22 : .2, .58, o.top, { r2: .25, sz: .66, seg: 18 }); sph(0, 1.46, 0, .25, o.top, { sy: .35, sz: .66, seg: 16, rings: 6, thMax: Math.PI / 2 });
   [-1, 1].forEach(s => { cyl(s * .29, .86, 0, .055, .6, o.arms || o.top, { r2: .065, seg: 10 }); sph(s * .29, .84, 0, .055, skin, { seg: 10, rings: 6 }); });
   if (o.shirt) { box(0, 1.16, .155, .12, .3, .01, o.shirt, { flat: true }); if (o.tie) box(0, 1.02, .162, .045, .4, .01, o.tie, { flat: true }); }
@@ -339,6 +438,11 @@ function person(o) {
   const ez = o.scarf ? .157 : .126;
   [-1, 1].forEach(s => sph(s * .047, 1.665, ez, .017, "#141414", { seg: 8, rings: 5 }));
   if (o.glasses) { [-1, 1].forEach(s => box(s * .048, 1.645, ez + .012, .07, .045, .008, "#111", { flat: true })); box(0, 1.665, ez + .012, .03, .01, .008, "#111", { flat: true }); }
+  if (o.sit) {
+    for (const a of Object.values(CUR)) for (let i = 1; i < a.length; i += 12) a[i] -= .36;
+    const lc = o.robe || o.pants;
+    [-1, 1].forEach(s => { box(s * .1, .4, .2, .17, .14, .5, lc); cyl(s * .1, .07, .42, .07, .38, lc, { r2: .075, seg: 10 }); box(s * .1, 0, .47, .13, .08, .27, "#16181c", { flat: true }); });
+  }
   const out = CUR; CUR = B; return out;
 }
 
@@ -413,10 +517,10 @@ const trans = (x, y, z) => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
 const I4 = trans(0, 0, 0);
 
 /* ============================== NAVIGATION ============================== */
-const DOORS = { meet: { x: 6, in: [6, 10.9], out: [6, 13.6] }, fin: { x: 18, in: [18, 10.9], out: [18, 13.6] }, exec: { x: 30, in: [30, 10.9], out: [30, 13.6] }, lobby: { x: 6, in: [6, 17.3], out: [6, 14.5] }, stock: { x: 22, in: [22, 17.8], out: [22, 14.5] } };
+const DOORS = { meet: { x: 6, in: [6, 10.9], out: [6, 13.6] }, fin: { x: 18, in: [18, 10.9], out: [18, 13.6] }, exec: { x: 30, in: [30, 10.9], out: [30, 13.6] }, office: { x: 39, in: [39, 10.9], out: [39, 13.6] }, corner: { x: 45, in: [45, 10.9], out: [45, 13.6] }, lobby: { x: 6, in: [6, 17.3], out: [6, 14.5] }, stock: { x: 22, in: [22, 17.8], out: [22, 14.5] }, cafe: { x: 41.5, in: [41.5, 17.3], out: [41.5, 14.5] } };
 const HUBS = { fin: [17.75, 6.2], meet: [10.6, 9.2], exec: [27.2, 8.6], stock: [24, 19.2] };
 const blockedR = (x, z, r) => colliders.some(c => x > c[0] - r && x < c[2] + r && z > c[1] - r && z < c[3] + r);
-function segBlocked(a, b) { const d = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let s = .4; s < d - .2; s += .2) { const t = s / d; if (blockedR(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, .18)) return true; } return false; }
+function segBlocked(a, b) { const d = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let s = .4; s < d - .2; s += .1) { const t = s / d; if (blockedR(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, .3)) return true; } return false; }
 function pathTo(p, tg) {
   const ra = roomKey(p.x, p.z), rb = tg.room, pts = [];
   if (ra !== rb) {
@@ -436,6 +540,19 @@ const MESH = {
   execF: person({ pants: "#1a1a1e", top: "#1a1a1e", robe: "#1a1a1e", skin: "#d4a586", scarf: "#1a1a1e" }),
   mariam: person({ pants: "#14161a", top: "#2a3442", skin: "#d4a586", scarf: "#c9b98a" }),
   ravi: person({ pants: "#2f3b4a", top: "#3a4a5e", skin: "#9c6b4e", hair: "#151515", vest: true }),
+  cwA: person({ pants: "#33363d", top: "#5b6f8a", skin: "#c99b7a", hair: "#2a1d16", shirt: "#f4f1ea", tie: "#2f6db3" }),
+  cwB: person({ pants: "#2a2a30", top: "#8a3b4a", skin: "#e0b394", hair: "#5a3520", long: true }),
+  cwC: person({ pants: "#1a1a1e", top: "#3e5c58", robe: "#3e5c58", skin: "#cf9f80", scarf: "#d9c7a0" }),
+  cwD: person({ robe: "#f6f6f2", top: "#f6f6f2", skin: "#a8775a", hair: "#1f1a17", ghutra: true }),
+  cwE: person({ pants: "#4a4238", top: "#e6e0d4", skin: "#8a5e44", hair: "#151515", glasses: true }),
+  cwF: person({ pants: "#2b2f36", top: "#3a3f48", skin: "#d4a586", hair: "#1a1410", shirt: "#ffffff", beard: true }),
+  barista: person({ pants: "#22252b", top: "#2b2b2e", skin: "#b07a58", hair: "#151515", vest: false, shirt: "#6b3f22" }),
+  cwA_s: person({ pants: "#33363d", top: "#5b6f8a", skin: "#c99b7a", hair: "#2a1d16", shirt: "#f4f1ea", tie: "#2f6db3", sit: true }),
+  cwB_s: person({ pants: "#2a2a30", top: "#8a3b4a", skin: "#e0b394", hair: "#5a3520", long: true, sit: true }),
+  cwC_s: person({ pants: "#1a1a1e", top: "#3e5c58", robe: "#3e5c58", skin: "#cf9f80", scarf: "#d9c7a0", sit: true }),
+  cwD_s: person({ robe: "#f6f6f2", top: "#f6f6f2", skin: "#a8775a", hair: "#1f1a17", ghutra: true, sit: true }),
+  cwE_s: person({ pants: "#4a4238", top: "#e6e0d4", skin: "#8a5e44", hair: "#151515", glasses: true, sit: true }),
+  boss_s: person({ pants: "#1a1a1e", top: "#1a1a1e", robe: "#1a1a1e", skin: "#d4a586", scarf: "#5a2a40", sit: true }),
 };
 const NPCS = {
   sara: { x: 10.1, z: 5.2, rot: -Math.PI / 2, mesh: "sara" },

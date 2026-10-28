@@ -83,6 +83,15 @@ const views = {
     </div>
     <p style="margin:0 0 14px;color:var(--ink-dim)">${isStudent() ? "Hints cost 25% of a task's points. The AI mentor counts as a hint." : "Stuck? Every task has a free hint button."}</p>
     <div class="row-btns"><button class="btn red" data-act="${state.obReturn ? "hub" : "finishob"}">${state.obReturn ? "Back" : "Go to the office"}</button>${state.obReturn ? "" : `<button class="btn plain" data-act="ob2">Back</button>`}</div></article>`,
+  desk: () => {
+    const hc = hqCfg(), next = ["desk", "office", "corner"].find(w => ["hot", "desk", "office", "corner"].indexOf(w) > ["hot", "desk", "office", "corner"].indexOf(hc.ws)), nextRank = { desk: 1, office: 3, corner: 6 }[next];
+    return `<article class="paper memo fadein"><div class="letterhead"><div class="co">${esc(WS_NAME[hc.ws])}</div><div class="label">Haddad &amp; Partners HQ</div></div>
+    <div class="staffcard">${avatarHTML(72)}<div><b>${esc(myName() || "New starter")}</b><small>${esc(RANKS[hc.rank])} · ${N(career().xp)} XP · ${Object.keys(save.badges).length} badges${streakNow() ? ` · 🔥 ${streakNow()}` : ""}</small></div></div>
+    <p>${{ hot: "Interns share the hot desk. Get promoted to <b>Analyst</b> and this desk becomes yours, with your name on it.", desk: `This is your own desk, with your nameplate in your colour.${hc.rank >= 2 ? " You've earned a plant and a photo frame too." : " At Associate you get a plant and a photo frame."}`, office: `Your own private office. Every promotion certificate hangs on the wall, and your badges sit on the trophy shelf.${hc.rank < 5 ? " More furniture arrives as you climb." : ""}`, corner: "The corner office: windows on two sides, the best view in the building, and a trophy cabinet for every badge." }[hc.ws]}</p>
+    <div class="perks">${[["hot", "Intern", "Hot desk"], ["desk", "Analyst", "Your own desk"], ["office", "Senior Associate", "Private office"], ["corner", "Director", "Corner office"]].map(([w, r, t]) => `<div class="perk ${w === hc.ws ? "now" : ["hot", "desk", "office", "corner"].indexOf(w) < ["hot", "desk", "office", "corner"].indexOf(hc.ws) ? "past" : ""}"><b>${esc(t)}</b><small>${esc(r)}</small></div>`).join("")}</div>
+    ${next ? `<p style="color:var(--ink-dim);font-size:14px">Next upgrade at <b>${RANKS[nextRank]}</b>.</p>` : ""}
+    <div class="row-btns"><button class="btn red" data-act="close">Back to the office</button><button class="btn plain" data-act="hub">Menu</button></div></article>`;
+  },
   ladder: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Career ladder</div><div class="label">${isStudent() ? "Student mode" : "Play for fun"}</div></div>${ladderHTML()}<button class="btn red" data-act="hub">Back</button></article>`,
   hub: () => {
     const cr = career(), pr = xpProgress(), cur = save.cur[save.mode], dailyDone = save.daily[save.mode] === today(), conf = state.confirm;
@@ -100,6 +109,7 @@ const views = {
         ${cur ? `<button class="btn ${interviewReady() ? "" : "red"}" data-act="resume"><span>Resume: ${esc(cur.client.name)}</span><small>${Object.values(cur.res).filter(r => r.status === "done").length}/${cur.tasks.length} done</small></button>` : ""}
         <button class="btn ${cur || interviewReady() ? "" : "red"}" data-act="new"><span>New ${JOB()}</span><small>${cur ? "replaces the current one" : "a new client"}</small></button>
         <button class="btn" data-act="daily" ${dailyDone ? "disabled" : ""}><span>Daily challenge</span><small>${dailyDone ? "done today ✓" : "1.5× XP"}</small></button>
+        <button class="btn" data-act="hq"><span>Walk around the office</span><small>${esc(WS_NAME[WS_OF(pr.rk)].toLowerCase())}, café, coworkers</small></button>
         ${conf ? `<div class="confirm paper" style="padding:12px"><p style="margin:0 0 8px">${conf === "reset" ? "Erase all progress in both modes? This can't be undone." : `Quit the current ${JOB()}? Its progress will be lost.`}</p><div class="row-btns"><button class="btn red" data-act="confirmyes">${conf === "reset" ? "Erase everything" : "Abandon it"}</button><button class="btn plain" data-act="confirmno" style="background:#fff">Cancel</button></div></div>` : ""}
         ${location.hash === "#dev" ? `<div class="paper devbox"><b>Tester tools</b><span>Jump to a rank to try its questions. Your next new ${JOB()} uses the new level.</span><div class="picks">${RANKS.map((n, i) => `<button class="pickb ${i === pr.rk ? "sel" : ""}" data-act="devrank" data-id="${i}">${n}</button>`).join("")}</div><button class="btn plain" data-act="deviv" style="margin-top:8px">Unlock the next interview</button></div>` : ""}
         <button class="btn ghost" data-act="badges"><span>Badges</span><small>${Object.keys(save.badges).length}/${BADGES.length}</small></button>
@@ -125,7 +135,7 @@ const views = {
     <div class="row-btns"><button class="btn red" data-act="close">Back to work</button><button class="btn plain" data-act="menu">Save and leave</button></div></article>`,
   note: () => {
     const c = ENG && ENG.client;
-    const n = state.note === "mariam" ? { who: "Mariam · Reception", av: "M", col: "#5a4a30", h: c ? `Welcome to ${c.name}` : "Welcome", body: `<p>"${hi("Good morning")}! ${c ? "Sara from Haddad &amp; Partners is in the <b>meeting room</b>, straight across the corridor." : "Pick an engagement from the menu to get started."}"</p>${c ? `<p>"The Finance floor is next door, ${esc(c.exec)}'s office is at the far end, and the <b>Stockroom</b> is through the doors on your right. Just follow the yellow arrow."</p>` : ""}` }
+    const n = state.note === "mariam" ? { who: "Mariam · Reception", av: "M", col: "#5a4a30", h: c ? `Welcome to ${c.name}` : "Welcome back to Haddad & Partners", body: `<p>"${hi("Good morning")}! ${c ? "Sara from Haddad &amp; Partners is in the <b>meeting room</b>, straight across the corridor." : `${{ hot: "The interns' hot desk is on the Finance floor", desk: "Your desk is on the Finance floor", office: "Your office is at the east end of the corridor", corner: "The corner office is at the far east end" }[hqCfg().ws]}. Sara is in the <b>meeting room</b> when you're ready for a job, and the <b>café</b> is at the far east end."`}"</p>${c ? `<p>"The Finance floor is next door, ${esc(c.exec)}'s office is at the far end, and the <b>Stockroom</b> is through the doors on your right. Just follow the yellow arrow."</p>` : ""}` }
       : { who: "Client fact sheet", av: "i", col: "#2f6db3", h: c.name, body: `<div class="facts"><div class="fact"><div class="v">${esc(c.ind)}</div><div class="k">Industry</div></div><div class="fact"><div class="v">${esc(c.exec)}</div><div class="k">${esc(c.role)}</div></div><div class="fact"><div class="v">${esc(c.prod)}</div><div class="k">Main stock line</div></div><div class="fact"><div class="v">${esc(ENG.service)}</div><div class="k">Engagement</div></div></div><p class="label" style="color:var(--ink-dim)">Financial year ends 31 December. All amounts in AED.</p>` };
     return `<article class="paper memo fadein"><div class="letterhead"><div class="co">${esc(n.who)}</div></div><div class="npc-line"><div class="av" style="background:${n.col}">${n.av}</div><div><h2>${esc(n.h)}</h2>${n.body}</div></div><div style="margin-top:12px"><button class="btn red" data-act="close">Got it</button></div></article>`;
   },
@@ -207,11 +217,12 @@ const views = {
     <p style="color:var(--ink-dim);font-size:14px">Coworkers will greet you by name, and your name goes on your desk and promotion letters.</p>
     <div class="row-btns"><button class="btn red" data-act="saveyou">Save</button>${state.youNext ? "" : `<button class="btn plain" data-act="hub">Cancel</button>`}</div></article>`,
 };
-const PERKS = ["", "You get your own desk on the Finance floor.", "Your desk gets a nameplate and a plant.", "You get a private office.", "You're leading the team now.", "You move into the executive suite.", "Your office gets a city view.", "Welcome to the corner office."];
+const PERKS = ["", "You get your own desk with your nameplate.", "Your desk gets a plant and a photo frame.", "You get your own private office.", "Your office gets a whiteboard for leading the team.", "Your office gets a sofa for meeting clients.", "You move into the corner office, with windows on two sides.", "A gold trophy for your desk. You've made it to the top."];
 const perkLine = rk => PERKS[rk] || "";
 function ladderHTML() { const rk = curRank(); return `<div class="ladder">${RANKS.map((n, i) => `<div class="rung ${i === rk ? "me" : i < rk ? "past" : ""}"><span class="n">${i + 1}</span><b>${n}${i === rk ? " · you" : ""}</b><span class="x">${N(XP_AT[i])} XP</span></div>`).reverse().join("")}</div>`; }
 
 function renderUI() {
+  if (!ENG) ensureHQWorld();
   renderHud();
   if (state.ui !== "task" && state.ui !== "interview" && calc.open) toggleCalc(false);
   if (!state.ui) { ov.hidden = true; ov.innerHTML = ""; return; }
@@ -254,6 +265,7 @@ document.addEventListener("click", e => {
     case "ivopt": if (state.iv.picked === null) { state.iv.sel = +id; Audio.play("click"); renderUI(); } break;
     case "ivsubmit": interviewAnswer(); break;
     case "ivnext": interviewNext(); ov.scrollTop = 0; break;
+    case "hq": Audio.play("stamp"); state.ui = null; state.confirm = null; renderUI(); updatePrompt(); toast(state.hqSeen ? "Back at Haddad & Partners." : `Follow the arrow to ${WS_NAME[hqCfg().ws].toLowerCase()}.`); break;
     case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
     case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
     case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }
@@ -298,9 +310,9 @@ ov.addEventListener("submit", e => {
 function boot() {
   if (isTouch) document.body.classList.add("touch");
   if (!gl) { document.body.insertAdjacentHTML("beforeend", `<div id="nogl"><div><h2 class="display" style="font-size:40px">3D isn't available</h2><p style="color:var(--chalk-dim)">This browser or device couldn't start WebGL. Try a recent version of Chrome, Edge, Safari or Firefox.</p></div></div>`); return; }
-  initGL(); uploadWorld({ palette: 0, bay: 18, stripe: "#c8372d", seed: 1 }); rebuildInter();
+  initGL(); ensureHQWorld(true);
   renderUI(); updatePrompt();
   requestAnimationFrame(frame);
 }
-if (location.hash === "#test") window.__tt = { get state() { return state; }, get save() { return save; }, get eng() { return ENG; }, get guide() { return guide; }, go(x, z, yaw, pitch = 0) { Object.assign(state.player, { x, z, yaw, pitch }); }, near: () => near && near.id, interact, newEngagement, startEngagement, finishEngagement, STATIONS, colliders: () => colliders, pathTo, openTask };
+if (location.hash === "#test") window.__tt = { get state() { return state; }, get save() { return save; }, get eng() { return ENG; }, get guide() { return guide; }, go(x, z, yaw, pitch = 0) { Object.assign(state.player, { x, z, yaw, pitch }); }, near: () => near && near.id, interact, newEngagement, startEngagement, finishEngagement, STATIONS, colliders: () => colliders, pathTo, openTask, inter: () => INTER, cw: () => CW };
 boot();
