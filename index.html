@@ -294,6 +294,21 @@ details .steps{margin:8px 0 6px}
 .devbox .picks{margin:6px 0 0}
 .devbox .pickb{padding:6px 10px;font-size:13px}
 #nogl{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:24px;z-index:50;background:var(--mat)}
+.avatar{flex:none;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-family:var(--f-display);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
+.me-row{display:flex;align-items:center;gap:12px;margin-bottom:6px}.me-row>div:nth-child(2){flex:1;min-width:0}
+.streak{flex:none;text-align:center;font-weight:800;font-size:22px;line-height:1;padding:6px 10px;border-radius:8px;background:#fff1dc;color:#a4561a}.streak small{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.namecta{display:block;width:100%;text-align:left;margin:0 0 12px;padding:10px 12px;border:1.5px dashed var(--manila-dk);background:#fffaf0;border-radius:8px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.btn.glow{animation:glow 1.6s ease-in-out infinite}@keyframes glow{50%{box-shadow:0 3px 0 #8f2119,0 0 0 6px rgba(242,223,99,.55)}}
+.ivcta{display:flex;flex-direction:column;gap:4px;margin:14px 0 0;padding:14px;border-radius:8px;background:#fff6d6;border:1.5px solid var(--hi)}
+.streakline{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:#fff1dc;color:#7a3f12}
+.ivdots{display:flex;gap:6px;margin:0 0 14px}.ivdots i{flex:1;height:5px;border-radius:3px;background:var(--rule)}.ivdots i.past{background:var(--ok)}.ivdots i.now{background:var(--tick)}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.bdg{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:14px 10px;border-radius:10px;background:#efe9da;opacity:.6}.bdg.got{background:#fff;opacity:1;box-shadow:0 2px 0 var(--rule)}
+.bdg .bi{font-size:30px;line-height:1}.bdg small{color:var(--ink-dim);font-size:12px;line-height:1.3}
+.badge-toast{display:flex;align-items:center;gap:12px;text-align:left;border:2px solid var(--hi)}.badge-toast .bi{font-size:28px}.badge-toast small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
+.staffcard{display:flex;align-items:center;gap:16px;padding:14px;margin:0 0 16px;border-radius:10px;background:#fff;box-shadow:0 2px 0 var(--rule)}.staffcard b{display:block;font-size:22px}.staffcard small{color:var(--ink-dim)}
+.namein{display:block;width:100%;max-width:340px;margin:6px 0 16px;padding:10px 12px;font:inherit;font-size:18px;border:1.5px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink)}
+.swatches{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 14px}.sw{width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px var(--rule);cursor:pointer}.sw.sel{box-shadow:0 0 0 3px var(--ink)}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>
@@ -959,8 +974,8 @@ const rankOf = xp => { let i = 0; while (i < RANKS.length - 1 && xp >= XP_AT[i +
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const hashStr = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const KEY = "tickandtie.v2";
-const blankCareer = () => ({ xp: 0, eng: 0, sumPct: 0, best: 0 });
-const freshSave = (m = true, s = true) => ({ v: 2, onboarded: false, mode: "casual", major: "Accounting", year: 1, careers: { casual: blankCareer(), student: blankCareer() }, daily: { casual: "", student: "" }, cur: { casual: null, student: null }, recent: { casual: [], student: [] }, music: m, sfx: s, coach: 0 });
+const blankCareer = () => ({ xp: 0, eng: 0, sumPct: 0, best: 0, rank: 0 });
+const freshSave = (m = true, s = true) => ({ v: 2, onboarded: false, mode: "casual", major: "Accounting", year: 1, careers: { casual: blankCareer(), student: blankCareer() }, daily: { casual: "", student: "" }, cur: { casual: null, student: null }, recent: { casual: [], student: [] }, music: m, sfx: s, coach: 0, name: "", color: "#2f6db3", streak: { n: 0, last: "", best: 0 }, badges: {} });
 function loadSave() { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.v === 2) return s; } catch (e) {} return null; }
 let save = loadSave() || freshSave();
 if (save.coach === undefined) save.coach = 0;
@@ -969,11 +984,11 @@ const career = () => save.careers[save.mode];
 const isStudent = () => save.mode === "student";
 /* Play for fun uses a beginner pool at the easiest tier; numeric answers become multiple choice with a tip on every task. */
 const CASUAL_IDS = new Set(["acc_classify", "acc_cutoff", "acc_count", "acc_materiality", "acc_baddebt", "acc_depr", "acc_prepaid", "fin_tvm", "fin_ratio", "fin_breakeven", "mkt_funnel", "mkt_classify", "mkt_campaign", "mkt_share", "mkt_pricing", "mgt_swot", "mgt_theory", "mgt_roster", "mgt_ops", "mgt_lead", "mgt_count", "eco_cpi", "eco_gdp", "eco_classify"]);
-function baseTier() { const rk = rankOf(career().xp); return isStudent() ? Math.min(4, YEAR_BASE[save.year] + Math.floor((rk + (save.year === 4 ? 2 : 0)) / 3)) : 1; }
+function baseTier() { const rk = curRank(); return isStudent() ? Math.min(4, YEAR_BASE[save.year] + Math.floor((rk + (save.year === 4 ? 2 : 0)) / 3)) : 1; }
 const ptsFor = tier => 100 + 25 * (tier - 1);
 const funTier = rk => rk <= 2 ? 1 : rk <= 4 ? 2 : 3;
 const engLength = rk => isStudent() ? Math.min(12, 6 + Math.floor(rk * .85)) : 4 + Math.floor(rk * .5);
-const bossTitle = () => { const rk = rankOf(career().xp); return rk < 4 ? "Manager" : rk < 6 ? "Director" : "Managing Partner"; };
+const bossTitle = () => { const rk = curRank(); return rk < 4 ? "Manager" : rk < 6 ? "Director" : "Managing Partner"; };
 
 /* ============================== CLIENTS & STATIONS ============================== */
 const INDUSTRIES = [
@@ -1016,7 +1031,7 @@ const KIND_AT = { calc: ["desk", "files"], classify: ["files", "desk"], flag: ["
 
 function newEngagement(daily) {
   const seed = daily ? hashStr(today() + save.mode + (isStudent() ? save.major + save.year : "")) : (Math.random() * 2 ** 31) | 0;
-  const r = mul32(seed), h = H(r), rk = rankOf(career().xp), tier = baseTier();
+  const r = mul32(seed), h = H(r), rk = curRank(), tier = baseTier();
   const n = daily ? (isStudent() ? 8 : 6) : engLength(rk);
   const ind = h.pick(INDUSTRIES), ex = h.pick(EXECS);
   const recent = new Set(save.recent[save.mode] || []), used = new Set(), list = [], majCount = {};
@@ -1089,6 +1104,108 @@ function makeTask(eng, t, i, sd) { const T = TPL[t.tpl]; return { ...t, key: Str
 function materialize(eng) {
   ENG = { ...eng, list: eng.tasks.map((t, i) => makeTask(eng, t, i, eng.seed + i * 7919 + 1)), capT: eng.cap ? makeTask(eng, eng.cap, "cap", eng.seed + 99991) : null };
   return ENG;
+}
+/* ============================== YOU: NAME, STREAKS, BADGES, INTERVIEWS ============================== */
+const AV_COLORS = ["#c8372d", "#2f6db3", "#2e8b57", "#8e44ad", "#e08a1e", "#16a3a3", "#d6457f", "#2f3a4c"];
+if (save.name === undefined) save.name = "";
+if (save.color === undefined) save.color = AV_COLORS[1];
+if (!save.streak) save.streak = { n: 0, last: "", best: 0 };
+if (!save.badges) save.badges = {};
+for (const m of ["casual", "student"]) { const c = save.careers[m]; if (c.rank === undefined) c.rank = rankOf(c.xp); }
+const curRank = () => career().rank;
+const myName = () => save.name || "";
+const hi = (pre = "Hi") => myName() ? `${pre}, ${escH(myName())}` : pre;
+const avatarHTML = (size = 34) => `<span class="avatar" style="background:${save.color};width:${size}px;height:${size}px;font-size:${Math.round(size * .45)}px">${escH((myName()[0] || "?").toUpperCase())}</span>`;
+
+/* ---------- daily streak ---------- */
+const dayShift = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const streakNow = () => { const s = save.streak; return s.last === today() || s.last === dayShift(today(), -1) ? s.n : 0; };
+const streakBonus = n => Math.min(25, Math.max(0, n - 1) * 5);
+function bumpStreak() {
+  const s = save.streak, t = today();
+  if (s.last === t) return false;
+  s.n = s.last === dayShift(t, -1) ? s.n + 1 : 1; s.last = t; s.best = Math.max(s.best, s.n); return true;
+}
+
+/* ---------- badges ---------- */
+const BADGES = [
+  { id: "first", ic: "👋", name: "First day", how: "Finish your first job" },
+  { id: "perfect", ic: "💯", name: "Perfectionist", how: "Score 100% on a job" },
+  { id: "nohint", ic: "🧠", name: "No help needed", how: "Finish a job without using a hint" },
+  { id: "daily", ic: "📅", name: "Daily player", how: "Finish a daily challenge" },
+  { id: "streak3", ic: "🔥", name: "On a roll", how: "Play 3 days in a row" },
+  { id: "streak7", ic: "🚀", name: "Week warrior", how: "Play 7 days in a row" },
+  { id: "jobs10", ic: "💼", name: "Regular", how: "Finish 10 jobs" },
+  { id: "jobs25", ic: "🏅", name: "Veteran", how: "Finish 25 jobs" },
+  { id: "promo", ic: "📈", name: "Moving up", how: "Pass your first promotion interview" },
+  { id: "ace", ic: "🎯", name: "Nailed it", how: "Get 3 out of 3 in an interview" },
+  { id: "comeback", ic: "💪", name: "Comeback", how: "Pass an interview after failing one" },
+  { id: "manager", ic: "🗂️", name: "The boss", how: "Become a Manager" },
+  { id: "partner", ic: "🏆", name: "Corner office", how: "Become a Partner" },
+  { id: "practice", ic: "🔁", name: "Practice makes perfect", how: "Get a practice round right" },
+  { id: "eagle", ic: "🦅", name: "Eagle eye", how: "Count the stockroom right on the first try" },
+  { id: "named", ic: "🪪", name: "Name badge", how: "Add your name to your profile" },
+];
+const BADGE = Object.fromEntries(BADGES.map(b => [b.id, b]));
+let badgeAt = 0;
+function award(id) {
+  if (!BADGE[id] || save.badges[id]) return false;
+  save.badges[id] = today(); persist();
+  const b = BADGE[id], now = performance.now(), at = Math.max(now + 400, badgeAt); badgeAt = at + 2600;
+  setTimeout(() => { badgeToast(b); Audio.play("fanfare"); }, at - now);
+  return true;
+}
+function badgeToast(b) { const t = document.createElement("div"); t.className = "toast badge-toast fadein"; t.innerHTML = `<span class="bi">${b.ic}</span><span><small>Badge unlocked</small>${escH(b.name)}</span>`; document.body.append(t); setTimeout(() => t.remove(), 3400); }
+
+/* ---------- promotion interviews ---------- */
+const BEHAVE = [
+  { min: 1, q: "A teammate is stuck and their work is due today. What do you do?", a: "Offer to help, or find someone who can", w: ["Ignore it, it's not your job", "Tell everyone they're slow", "Do their work and take the credit"] },
+  { min: 1, q: "You find a mistake in work you already sent to a client. What do you do?", a: "Tell your manager and send a corrected version quickly", w: ["Hope nobody notices", "Blame the client's numbers", "Delete the email"] },
+  { min: 1, q: "Two tasks are due at the same time. What's the best move?", a: "Ask your manager which matters most and agree on new times", w: ["Do neither", "Rush both and hand in messy work", "Pick the easier one without telling anyone"] },
+  { min: 1, q: "Why should we promote you?", a: "I do careful work, help my team and learn from my mistakes", w: ["I've been here the longest", "I want a bigger salary", "Everyone else got promoted"] },
+  { min: 2, q: "A client asks for extra work that wasn't part of the deal. What do you say?", a: "Politely say you'll check with your manager first", w: ["Yes to everything, for free", "Hang up on them", "Say no and walk out"] },
+  { min: 2, q: "A new intern joins your team. What do you do?", a: "Show them around and explain how things work", w: ["Give them all your boring tasks", "Ignore them until they ask", "Tell them to figure it out"] },
+  { min: 3, q: "You disagree with your boss's plan. What's the professional thing to do?", a: "Explain your view politely, with reasons", w: ["Complain to your coworkers", "Do it badly on purpose", "Say nothing and ignore the plan"] },
+  { min: 4, q: "Your team missed its target this month. What do you do as the manager?", a: "Find out why together and plan how to fix it", w: ["Blame the newest person", "Hide the numbers", "Shout at the team"] },
+  { min: 4, q: "A team member's work isn't good enough. How do you tell them?", a: "Privately, kindly and specifically, with ideas to improve", w: ["In front of everyone", "Never tell them", "Send an angry email to the whole office"] },
+  { min: 5, q: "An important client is unhappy with your firm. What do you do?", a: "Call them, listen carefully and agree on a fix", w: ["Wait for them to calm down", "Send a discount code and nothing else", "Tell them they're wrong"] },
+  { min: 6, q: "As a Partner, what matters most for the firm's future?", a: "Keeping clients' trust and growing good people", w: ["Winning every argument", "Working alone", "Cutting corners to finish faster"] },
+];
+const interviewer = target => target <= 3 ? { name: "Sara", role: "your manager", av: "S", col: "#2f3a4c" } : target <= 5 ? { name: "Khalid Haddad", role: "Director", av: "K", col: "#1c2633" } : { name: "Layla Haddad", role: "Managing Partner", av: "L", col: "#5a2a40" };
+const interviewReady = () => { const c = career(); return c.rank < RANKS.length - 1 && c.xp >= XP_AT[c.rank + 1] && c.eng >= (c.ivWait || 0); };
+const interviewEarned = () => { const c = career(); return c.rank < RANKS.length - 1 && c.xp >= XP_AT[c.rank + 1]; };
+
+function newInterview() {
+  const c = career(), target = c.rank + 1, seed = (Math.random() * 2 ** 31) | 0, r = mul32(seed), h = H(r), qs = [];
+  const b = h.pick(BEHAVE.filter(x => x.min <= target && x.min >= target - 3));
+  qs.push({ kind: "behave", title: "About you", brief: "", q: b.q, ...mcq(h, b.a, b.w), explain: `<b>${escH(b.a)}</b>.<br>Good professionals are honest, helpful and calm under pressure.` });
+  let pool;
+  if (isStudent()) { const tier = Math.min(4, YEAR_BASE[save.year] + Math.floor((target + (save.year === 4 ? 2 : 0)) / 3)); pool = TEMPLATES.filter(t => !t.cap && (t.kind === "mcq" || t.kind === "calc") && t.min <= tier && t.max >= tier - 1).map(t => [t, Math.max(t.min, Math.min(t.max, tier))]); const mine = pool.filter(([t]) => t.major === save.major); if (mine.length >= 4) pool = mine; }
+  else { const ft = funTier(target); pool = FUN.filter(t => (t.kind === "mcq" || t.kind === "calc") && t.min <= ft).map(t => [t, Math.max(t.min, ft)]); const top = pool.filter(([t]) => t.min === ft); if (top.length >= 3) pool = top; }
+  const ind = h.pick(INDUSTRIES), ctx = { client: "Falcon " + ind.sfx, exec: "the CEO", ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, bay: 18 };
+  for (const [t, tier] of h.pickN(pool, 2)) {
+    const sd = (r() * 2 ** 31) | 0, d = t.gen(mul32(sd), tier, ctx);
+    const opts = t.kind === "calc" ? numChoices(d, sd + 5) : { options: d.options, correct: d.correct };
+    qs.push({ kind: t.kind, title: t.title, brief: d.brief, table: d.table, facts: d.facts, q: d.q, options: opts.options, correct: opts.correct, explain: d.explain });
+  }
+  return { target, qs, i: 0, right: 0, sel: null, picked: null, done: false };
+}
+function interviewAnswer() {
+  const iv = state.iv, q = iv.qs[iv.i]; if (iv.sel === null || iv.picked !== null) return;
+  iv.picked = iv.sel; if (iv.sel === q.correct) { iv.right++; Audio.play("good"); } else Audio.play("bad");
+  renderUI();
+}
+function interviewNext() {
+  const iv = state.iv; iv.i++; iv.sel = null; iv.picked = null;
+  if (iv.i < iv.qs.length) { Audio.play("paper"); return renderUI(); }
+  iv.done = true; const c = career(), pass = iv.right >= 2;
+  if (pass) {
+    const before = c.rank; c.rank = iv.target; c.ivWait = 0;
+    award("promo"); if (iv.right === 3) award("ace"); if (c.failed) award("comeback"); c.failed = false;
+    if (c.rank >= 4) award("manager"); if (c.rank === RANKS.length - 1) award("partner");
+    state.promo = { before, after: c.rank, right: iv.right };
+    persist(); Audio.play("promo"); state.ui = "promo"; renderUI();
+  } else { c.ivWait = c.eng + 1; c.failed = true; persist(); Audio.play("bad"); renderUI(); }
 }
 /* ============================== TEXTURES ==============================
    Every surface texture is painted at load time on a canvas, so the game ships as one file. */
@@ -1867,7 +1984,7 @@ function drawCoach() {
 /* ============================== HUD ============================== */
 const hudEl = document.getElementById("hud"), objEl = document.getElementById("obj"), promptEl = document.getElementById("prompt"), tbtn = document.getElementById("tbtn");
 const esc = escH;
-function xpProgress() { const xp = career().xp, rk = rankOf(xp); if (rk === RANKS.length - 1) return { rk, pct: 100, need: 0 }; return { rk, pct: (xp - XP_AT[rk]) / (XP_AT[rk + 1] - XP_AT[rk]) * 100, need: XP_AT[rk + 1] - xp }; }
+function xpProgress() { const xp = career().xp, rk = curRank(); if (rk === RANKS.length - 1) return { rk, pct: 100, need: 0 }; return { rk, pct: Math.min(100, Math.max(0, (xp - XP_AT[rk]) / (XP_AT[rk + 1] - XP_AT[rk]) * 100)), need: Math.max(0, XP_AT[rk + 1] - xp) }; }
 function renderHud() {
   const pr = xpProgress(), inEng = ENG && !ENG.done && state.ui !== "hub" && !String(state.ui).startsWith("ob");
   hudEl.innerHTML = `<div class="brand">Corner <b>Office</b></div>
@@ -1961,18 +2078,23 @@ function submitTask() {
   else if (kind === "classify") { if (Object.keys(state.cls).length < d.items.length) { state.msg = "Choose a category for every item first."; return renderUI(); } let ok = 0; d.items.forEach((it, i) => { if (state.cls[i] === it.cat) ok++; }); frac = ok / d.items.length; res.given = { ...state.cls }; }
   const max = tk.key === "practice" ? 0 : ptsFor(tk.tier), mult = res.hint && isStudent() ? .75 : 1;
   Object.assign(res, { status: "done", frac, pts: Math.round(max * mult * frac), max });
-  if (tk.key !== "practice") storeEng();
+  if (tk.key !== "practice") storeEng(); else if (frac >= .99) award("practice");
+  if (kind === "count" && frac >= .99 && res.attempts === 1) award("eagle");
   Audio.play(frac >= .99 ? "good" : frac > 0 ? "stamp" : "bad"); if (frac >= .99) setTimeout(() => Audio.play("task"), 300);
   renderUI(); ov.scrollTop = ov.scrollHeight; if (tk.key !== "practice") rebuildInter();
 }
 function finishEngagement() {
   const items = [...ENG.list, ...(ENG.capT ? [ENG.capT] : [])];
   const score = items.reduce((s, t) => s + (ENG.res[t.key]?.pts || 0), 0), max = items.reduce((s, t) => s + ptsFor(t.tier), 0), pct = score / max * 100;
-  const xp = Math.round(score * (ENG.daily ? 1.5 : 1)), before = rankOf(career().xp);
+  const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak);
+  const xp = Math.round(score * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
   const cr = career(); cr.xp += xp; cr.eng += 1; cr.sumPct += pct; cr.best = Math.max(cr.best, Math.round(pct));
   if (ENG.daily) save.daily[save.mode] = ENG.date;
-  const after = rankOf(cr.xp);
-  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after };
+  const after = curRank(), noHint = items.every(t => !ENG.res[t.key]?.hint);
+  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after, streak, sb, newDay, interview: interviewReady(), justEarned: !wasReady && interviewEarned() };
+  const total = save.careers.casual.eng + save.careers.student.eng;
+  award("first"); if (pct >= 99.9) award("perfect"); if (noHint) award("nohint"); if (ENG.daily) award("daily");
+  if (streak >= 3) award("streak3"); if (streak >= 7) award("streak7"); if (total >= 10) award("jobs10"); if (total >= 25) award("jobs25");
   save.cur[save.mode] = null; persist(); ENG.done = true; openUI("report");
 }
 /* ============================== CALCULATOR ==============================
@@ -2119,18 +2241,22 @@ const views = {
     const cr = career(), pr = xpProgress(), cur = save.cur[save.mode], dailyDone = save.daily[save.mode] === today(), conf = state.confirm;
     return `<div class="hub fadein">
       <article class="paper"><div class="letterhead"><div class="co">Haddad &amp; Partners</div><div class="label">${isStudent() ? `${esc(save.major)} · Year ${save.year}` : "Play for fun"}</div></div>
-        <span class="label">Your position</span><div class="h2" style="margin-top:4px">${esc(RANKS[pr.rk])}</div>
+        <div class="me-row">${avatarHTML(46)}<div><span class="label">${myName() ? esc(myName()) + " · your position" : "Your position"}</span><div class="h2" style="margin-top:2px">${esc(RANKS[pr.rk])}</div></div>${streakNow() ? `<div class="streak" title="Days in a row">🔥 ${streakNow()}<small>day${streakNow() > 1 ? "s" : ""}</small></div>` : ""}</div>
         <div class="bigbar"><i style="width:${pr.pct}%"></i></div>
-        <p style="margin:0 0 12px;color:var(--ink-dim)">${pr.need ? `${N(pr.need)} XP to <b>${RANKS[pr.rk + 1]}</b>` : "You made Partner. Keep playing to raise your average."} · ${N(cr.xp)} XP total</p>
+        <p style="margin:0 0 12px;color:var(--ink-dim)">${pr.rk === RANKS.length - 1 ? "You made Partner. Keep playing to raise your average." : pr.need ? `${N(pr.need)} XP until your interview for <b>${RANKS[pr.rk + 1]}</b>` : `You've earned an interview for <b>${RANKS[pr.rk + 1]}</b>!`} · ${N(cr.xp)} XP total</p>
+        ${!myName() ? `<button class="namecta" data-act="you">✏️ Add your name and colour so the office knows who you are</button>` : ""}
         <div class="facts"><div class="fact"><div class="v">${cr.eng}</div><div class="k">${isStudent() ? "Engagements" : "Jobs done"}</div></div><div class="fact"><div class="v">${cr.eng ? Math.round(cr.sumPct / cr.eng) + "%" : "–"}</div><div class="k">Average score</div></div><div class="fact"><div class="v">${cr.eng ? cr.best + "%" : "–"}</div><div class="k">Best</div></div></div>
         <p style="margin:0;color:var(--ink-dim);font-size:14px">Next ${JOB()}: ${engLength(pr.rk)} tasks${isStudent() && baseTier() >= 2 ? " plus a final recommendation" : ""} · ${isStudent() ? `difficulty ${"●".repeat(baseTier())}${"○".repeat(4 - baseTier())}` : `questions: ${FUN_LEVEL[funTier(pr.rk)].toLowerCase()}`}</p>
       </article>
       <div class="menu">
-        ${cur ? `<button class="btn red" data-act="resume"><span>Resume: ${esc(cur.client.name)}</span><small>${Object.values(cur.res).filter(r => r.status === "done").length}/${cur.tasks.length} done</small></button>` : ""}
-        <button class="btn ${cur ? "" : "red"}" data-act="new"><span>New ${JOB()}</span><small>${cur ? "replaces the current one" : "a new client"}</small></button>
+        ${interviewEarned() ? (interviewReady() ? `<button class="btn red glow" data-act="interview"><span>Promotion interview</span><small>for ${RANKS[pr.rk + 1]} · 3 questions</small></button>` : `<div class="paper" style="padding:12px 14px;font-size:14px">${interviewer(pr.rk + 1).name}: "Not this time, but you were close. Finish one more ${JOB()} and you can try the interview again."</div>`) : ""}
+        ${cur ? `<button class="btn ${interviewReady() ? "" : "red"}" data-act="resume"><span>Resume: ${esc(cur.client.name)}</span><small>${Object.values(cur.res).filter(r => r.status === "done").length}/${cur.tasks.length} done</small></button>` : ""}
+        <button class="btn ${cur || interviewReady() ? "" : "red"}" data-act="new"><span>New ${JOB()}</span><small>${cur ? "replaces the current one" : "a new client"}</small></button>
         <button class="btn" data-act="daily" ${dailyDone ? "disabled" : ""}><span>Daily challenge</span><small>${dailyDone ? "done today ✓" : "1.5× XP"}</small></button>
         ${conf ? `<div class="confirm paper" style="padding:12px"><p style="margin:0 0 8px">${conf === "reset" ? "Erase all progress in both modes? This can't be undone." : `Quit the current ${JOB()}? Its progress will be lost.`}</p><div class="row-btns"><button class="btn red" data-act="confirmyes">${conf === "reset" ? "Erase everything" : "Abandon it"}</button><button class="btn plain" data-act="confirmno" style="background:#fff">Cancel</button></div></div>` : ""}
-        ${location.hash === "#dev" ? `<div class="paper devbox"><b>Tester tools</b><span>Jump to a rank to try its questions. Your next new ${JOB()} uses the new level.</span><div class="picks">${RANKS.map((n, i) => `<button class="pickb ${i === pr.rk ? "sel" : ""}" data-act="devrank" data-id="${i}">${n}</button>`).join("")}</div></div>` : ""}
+        ${location.hash === "#dev" ? `<div class="paper devbox"><b>Tester tools</b><span>Jump to a rank to try its questions. Your next new ${JOB()} uses the new level.</span><div class="picks">${RANKS.map((n, i) => `<button class="pickb ${i === pr.rk ? "sel" : ""}" data-act="devrank" data-id="${i}">${n}</button>`).join("")}</div><button class="btn plain" data-act="deviv" style="margin-top:8px">Unlock the next interview</button></div>` : ""}
+        <button class="btn ghost" data-act="badges"><span>Badges</span><small>${Object.keys(save.badges).length}/${BADGES.length}</small></button>
+        <button class="btn ghost" data-act="you"><span>Your profile</span><small>name and colour</small></button>
         <button class="btn ghost" data-act="ladder"><span>Career ladder</span></button>
         <button class="btn ghost" data-act="howto"><span>How to play</span></button>
         ${isStudent() ? `<button class="btn ghost" data-act="ob1"><span>Change major or year</span></button>` : ""}
@@ -2142,7 +2268,7 @@ const views = {
   brief: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">${esc(ENG.client.name)}</div><div class="label">${ENG.daily ? "Daily challenge · " : ""}${esc(ENG.service)}</div></div>
     <div class="npc-line"><div class="av" style="background:#2f3a4c">S</div><div>
     <h2>Today's ${JOB()}</h2>
-    ${isStudent() ? `<p>"Welcome! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"Hi! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
+    ${isStudent() ? `<p>"${hi("Welcome")}! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"${hi()}! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
     <p class="label" style="color:var(--ink-dim)">${isTouch ? "Tap Tasks" : "Press T"} any time to see this list again.</p>
     <span class="sig">Sara</span><div style="margin-top:14px"><button class="btn red" data-act="briefed">Get to work</button></div></article>`,
@@ -2152,7 +2278,7 @@ const views = {
     <div class="row-btns"><button class="btn red" data-act="close">Back to work</button><button class="btn plain" data-act="menu">Save and leave</button></div></article>`,
   note: () => {
     const c = ENG && ENG.client;
-    const n = state.note === "mariam" ? { who: "Mariam · Reception", av: "M", col: "#5a4a30", h: c ? `Welcome to ${c.name}` : "Welcome", body: `<p>"Good morning! ${c ? "Sara from Haddad &amp; Partners is in the <b>meeting room</b>, straight across the corridor." : "Pick an engagement from the menu to get started."}"</p>${c ? `<p>"The Finance floor is next door, ${esc(c.exec)}'s office is at the far end, and the <b>Stockroom</b> is through the doors on your right. Just follow the yellow arrow."</p>` : ""}` }
+    const n = state.note === "mariam" ? { who: "Mariam · Reception", av: "M", col: "#5a4a30", h: c ? `Welcome to ${c.name}` : "Welcome", body: `<p>"${hi("Good morning")}! ${c ? "Sara from Haddad &amp; Partners is in the <b>meeting room</b>, straight across the corridor." : "Pick an engagement from the menu to get started."}"</p>${c ? `<p>"The Finance floor is next door, ${esc(c.exec)}'s office is at the far end, and the <b>Stockroom</b> is through the doors on your right. Just follow the yellow arrow."</p>` : ""}` }
       : { who: "Client fact sheet", av: "i", col: "#2f6db3", h: c.name, body: `<div class="facts"><div class="fact"><div class="v">${esc(c.ind)}</div><div class="k">Industry</div></div><div class="fact"><div class="v">${esc(c.exec)}</div><div class="k">${esc(c.role)}</div></div><div class="fact"><div class="v">${esc(c.prod)}</div><div class="k">Main stock line</div></div><div class="fact"><div class="v">${esc(ENG.service)}</div><div class="k">Engagement</div></div></div><p class="label" style="color:var(--ink-dim)">Financial year ends 31 December. All amounts in AED.</p>` };
     return `<article class="paper memo fadein"><div class="letterhead"><div class="co">${esc(n.who)}</div></div><div class="npc-line"><div class="av" style="background:${n.col}">${n.av}</div><div><h2>${esc(n.h)}</h2>${n.body}</div></div><div style="margin-top:12px"><button class="btn red" data-act="close">Got it</button></div></article>`;
   },
@@ -2192,26 +2318,60 @@ const views = {
     const rp = state.report;
     return `<article class="paper fadein"><div class="letterhead"><div class="co">${isStudent() ? "Engagement report" : "Job report"}</div><div class="label">${esc(rp.client)} · ${esc(rp.service)}</div></div>
       <div class="score-top"><div><span class="label">Score</span><div class="bigscore num" id="bigscore">0</div><span class="label">of ${N(rp.max)} · ${Math.round(rp.pct)}%</span><div class="stars">${stars(rp.pct)}</div></div>
-      <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${rp.daily ? "daily bonus 1.5×" : esc(RANKS[rp.after])}</small></div></div>
+      <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${[rp.daily ? "daily 1.5×" : "", rp.sb ? `🔥 streak +${rp.sb}%` : ""].filter(Boolean).join(" · ") || esc(RANKS[rp.after])}</small></div></div>
+      ${rp.newDay ? `<p class="streakline">🔥 <b>${rp.streak}-day streak!</b> ${rp.streak > 1 ? `Play tomorrow to keep it going${rp.sb < 25 ? ` and raise your bonus to +${streakBonus(rp.streak + 1)}%` : ""}.` : "Come back tomorrow to start a streak and earn bonus XP."}</p>` : ""}
+      ${rp.interview ? `<div class="ivcta"><b>${rp.justEarned ? "You've earned a promotion interview!" : "Your promotion interview is waiting."}</b><span>${esc(interviewer(rp.after + 1).name)} wants to see you about becoming <b>${RANKS[rp.after + 1]}</b>. Get 2 of 3 questions right to be promoted.</span></div>` : ""}
       <h3 class="section-h">Task by task</h3><p style="margin:-4px 0 10px;color:var(--ink-dim);font-size:14px">Tap a task to see how it's solved.</p>
       <div class="stack">${rp.items.map(t => `<details ${t.frac < .99 ? "open" : ""}><summary><span>${t.frac >= .99 ? "✓" : t.frac > 0 ? "½" : "✗"} ${esc(t.title)}${t.cap ? " (final)" : ""}</span><span class="num">${t.pts}/${t.max}</span></summary><ol class="steps">${stepsOf(t.explain).map(s => `<li>${s}</li>`).join("")}</ol><p class="key"><b>Remember:</b> ${esc(t.hint)}</p></details>`).join("")}</div>
       <div class="feedback-cta"><b>Testing the game?</b> Tell me what you thought. It takes 2 minutes. <a class="btn" href="${FEEDBACK_URL}" target="_blank" rel="noopener">Give feedback</a></div>
-      <div class="row-btns" style="margin-top:20px"><button class="btn red" data-act="${rp.after > rp.before ? "promo" : "hub"}">${rp.after > rp.before ? "Open the letter from Sara" : "Back to the firm"}</button></div></article>`;
+      <div class="row-btns" style="margin-top:20px">${rp.interview ? `<button class="btn red" data-act="interview">Go to the interview</button><button class="btn plain" data-act="hub">Later</button>` : `<button class="btn red" data-act="hub">Back to the firm</button>`}</div></article>`;
   },
-  promo: () => { const rp = state.report; return `<article class="paper memo fadein"><div class="promo"><span class="label">Haddad &amp; Partners · Promotion</span><div class="big stamp-in">${esc(RANKS[rp.after])}</div>
-    <p>"Congratulations. Your work on ${esc(rp.client)} made the decision easy. From your next ${JOB()} you'll handle ${engLength(rp.after)} tasks${!isStudent() && funTier(rp.after) > funTier(rp.before) ? `, and the questions get a bit trickier (level: ${FUN_LEVEL[funTier(rp.after)].toLowerCase()})` : ""}."</p><span class="sig">Sara</span>
+  promo: () => { const rp = state.promo, iv = interviewer(rp.after); return `<article class="paper memo fadein"><div class="promo"><span class="label">Haddad &amp; Partners · Promotion</span><div class="big stamp-in">${esc(RANKS[rp.after])}</div>
+    <div class="npc-line" style="justify-content:center"><div class="av" style="background:${iv.col}">${iv.av}</div></div>
+    <p>"${hi("Congratulations")}! You got ${rp.right} out of 3 in your interview. You're our new ${RANKS[rp.after]}. From your next ${JOB()} you'll handle ${engLength(rp.after)} tasks${!isStudent() && funTier(rp.after) > funTier(rp.before) ? `, and the questions get a bit trickier (level: ${FUN_LEVEL[funTier(rp.after)].toLowerCase()})` : ""}. ${perkLine(rp.after)}"</p><span class="sig">${esc(iv.name)}</span>
     <button class="btn red" data-act="hub">Back to the firm</button></div></article>`; },
+  interview: () => {
+    const iv = state.iv, who = interviewer(iv.target);
+    if (iv.done) return `<article class="paper memo fadein"><div class="letterhead"><div class="co">Promotion interview</div><div class="label">${RANKS[iv.target]}</div></div>
+      <div class="npc-line"><div class="av" style="background:${who.col}">${who.av}</div><div><h2>Not this time</h2><p>"You got ${iv.right} out of 3${myName() ? ", " + esc(myName()) : ""}. You need 2 to pass. You saw the right answers along the way, so finish one more ${JOB()}, and come back. I know you can do it."</p></div></div>
+      <button class="btn red" data-act="hub">Back to the firm</button></article>`;
+    const q = iv.qs[iv.i], answered = iv.picked !== null;
+    return `<section class="fadein"><article class="paper">
+      <div class="letterhead"><div class="co">Promotion interview · ${RANKS[iv.target]}</div><div class="label">Question ${iv.i + 1} of 3 · ${iv.right} right</div></div>
+      <div class="ivdots">${iv.qs.map((x, i) => `<i class="${i < iv.i ? "past" : i === iv.i ? "now" : ""}"></i>`).join("")}</div>
+      <div class="npc-line"><div class="av" style="background:${who.col}">${who.av}</div><div><b>${esc(who.name)}</b><small style="display:block;color:var(--ink-dim)">${esc(who.role)}</small>${q.brief ? `<p class="brief">${q.brief}</p>` : iv.i === 0 ? `<p class="brief">"${hi("Thanks for coming in")}. I have three questions for you. Get two right and the job is yours."</p>` : ""}</div></div>
+      ${q.facts ? `<div class="facts">${q.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}
+      ${q.table ? tableHTML(q.table, false, false, new Set(), null) : ""}
+      <p class="q">${esc(q.q)}</p>
+      <div class="choices">${q.options.map((o, i) => answered ? `<div class="choice ${i === q.correct ? "right" : i === iv.picked ? "wrong" : "dim"}"><b>${i === q.correct ? "✓ " : i === iv.picked ? "✗ " : ""}${esc(o)}</b></div>` : `<button class="choice ${iv.sel === i ? "sel" : ""}" data-act="ivopt" data-id="${i}"><b>${esc(o)}</b></button>`).join("")}</div>
+      ${answered ? `<div class="result ${iv.picked === q.correct ? "good" : "bad"}"><div class="res-h"><b class="t">${iv.picked === q.correct ? "✓ Good answer" : "✗ Not quite"}</b></div><div class="howto"><ol>${stepsOf(q.explain).map(x => `<li>${x}</li>`).join("")}</ol></div></div>
+        <div class="row-btns" style="margin-top:14px"><button class="btn red" data-act="ivnext">${iv.i < 2 ? "Next question" : "Hear the decision"}</button></div>`
+      : `<p class="instr">One try per question. Use the calculator if you need it.</p><div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="ivsubmit" ${iv.sel === null ? "disabled" : ""}>Lock in</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
+    </article></section>`;
+  },
+  badges: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Badges</div><div class="label">${Object.keys(save.badges).length} of ${BADGES.length} unlocked</div></div>
+    <div class="badges">${BADGES.map(b => { const got = save.badges[b.id]; return `<div class="bdg ${got ? "got" : ""}"><span class="bi">${got ? b.ic : "🔒"}</span><b>${esc(b.name)}</b><small>${esc(b.how)}</small></div>`; }).join("")}</div>
+    <p style="color:var(--ink-dim);font-size:14px;margin:12px 0">🔥 Best streak: <b>${save.streak.best}</b> day${save.streak.best === 1 ? "" : "s"}. Each day in a row adds +5% XP, up to +25%.</p>
+    <button class="btn red" data-act="hub">Back</button></article>`,
+  you: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Your profile</div><div class="label">Haddad &amp; Partners staff card</div></div>
+    <div class="staffcard">${avatarHTML(72)}<div><b>${esc(myName() || "New starter")}</b><small>${esc(RANKS[curRank()])}</small></div></div>
+    <form data-form="you"><label class="label" for="yourname">Your first name</label><input id="yourname" class="namein" maxlength="16" autocomplete="off" value="${esc(myName())}" placeholder="e.g. Abdullah"></form>
+    <span class="label">Your colour</span><div class="swatches">${AV_COLORS.map(c => `<button class="sw ${save.color === c ? "sel" : ""}" style="background:${c}" data-act="color" data-id="${c}" aria-label="Colour ${c}"></button>`).join("")}</div>
+    <p style="color:var(--ink-dim);font-size:14px">Coworkers will greet you by name, and your name goes on your desk and promotion letters.</p>
+    <div class="row-btns"><button class="btn red" data-act="saveyou">Save</button>${state.youNext ? "" : `<button class="btn plain" data-act="hub">Cancel</button>`}</div></article>`,
 };
-function ladderHTML() { const rk = rankOf(career().xp); return `<div class="ladder">${RANKS.map((n, i) => `<div class="rung ${i === rk ? "me" : i < rk ? "past" : ""}"><span class="n">${i + 1}</span><b>${n}${i === rk ? " · you" : ""}</b><span class="x">${N(XP_AT[i])} XP</span></div>`).reverse().join("")}</div>`; }
+const PERKS = ["", "You get your own desk on the Finance floor.", "Your desk gets a nameplate and a plant.", "You get a private office.", "You're leading the team now.", "You move into the executive suite.", "Your office gets a city view.", "Welcome to the corner office."];
+const perkLine = rk => PERKS[rk] || "";
+function ladderHTML() { const rk = curRank(); return `<div class="ladder">${RANKS.map((n, i) => `<div class="rung ${i === rk ? "me" : i < rk ? "past" : ""}"><span class="n">${i + 1}</span><b>${n}${i === rk ? " · you" : ""}</b><span class="x">${N(XP_AT[i])} XP</span></div>`).reverse().join("")}</div>`; }
 
 function renderUI() {
   renderHud();
-  if (state.ui !== "task" && calc.open) toggleCalc(false);
+  if (state.ui !== "task" && state.ui !== "interview" && calc.open) toggleCalc(false);
   if (!state.ui) { ov.hidden = true; ov.innerHTML = ""; return; }
   ov.hidden = false; ov.innerHTML = `<div class="ov-inner">${views[state.ui]()}</div>`;
   if (state.ui === "report") countUp();
   if (state.ui === "task") { const a = document.getElementById("ans"); if (a && !isTouch && !calc.open) a.focus({ preventScroll: true }); }
-  if (state.ui !== "task" && calc.open) toggleCalc(false); else renderCalc();
+  if (state.ui !== "task" && state.ui !== "interview" && calc.open) toggleCalc(false); else renderCalc();
 }
 function countUp() {
   const target = state.report.score, el = document.getElementById("bigscore"), t0 = performance.now();
@@ -2234,14 +2394,23 @@ document.addEventListener("click", e => {
   const act = t.dataset.act, id = t.dataset.id;
   Audio.init();
   switch (act) {
-    case "mode": save.mode = id; persist(); Audio.play("click"); state.ui = id === "student" ? "ob1" : save.onboarded ? "hub" : "ob2"; renderUI(); break;
+    case "mode": save.mode = id; persist(); Audio.play("click"); state.ui = id === "student" ? "ob1" : save.onboarded ? "hub" : "ob2"; if (!save.onboarded && !myName() && id !== "student" && !state.youSeen) { state.youSeen = true; state.youNext = state.ui; state.ui = "you"; } renderUI(); break;
     case "major": save.major = id; persist(); Audio.play("click"); renderUI(); break;
     case "year": save.year = +id; persist(); Audio.play("click"); renderUI(); break;
-    case "ob0": case "ob1": case "ob2": case "ob3": Audio.play("paper"); state.obReturn = null; state.ui = act; renderUI(); ov.scrollTop = 0; break;
+    case "ob0": case "ob1": case "ob2": case "ob3": Audio.play("paper"); state.obReturn = null; state.ui = act; if (act === "ob2" && !save.onboarded && !myName() && !state.youSeen) { state.youSeen = true; state.youNext = "ob2"; state.ui = "you"; } renderUI(); ov.scrollTop = 0; break;
     case "howto": state.obReturn = "hub"; state.ui = "ob3"; Audio.play("paper"); renderUI(); break;
     case "finishob": save.onboarded = true; persist(); Audio.play("stamp"); state.ui = "hub"; renderUI(); break;
     case "hub": Audio.play("paper"); state.obReturn = null; if (ENG) leaveToHub(); else { state.ui = "hub"; state.confirm = null; renderUI(); } break;
-    case "devrank": career().xp = XP_AT[+id]; persist(); Audio.play("stamp"); renderUI(); break;
+    case "devrank": career().xp = XP_AT[+id]; career().rank = +id; career().ivWait = 0; persist(); Audio.play("stamp"); renderUI(); break;
+    case "deviv": { const c = career(); if (c.rank < RANKS.length - 1) { c.xp = Math.max(c.xp, XP_AT[c.rank + 1]); c.ivWait = 0; persist(); } renderUI(); break; }
+    case "interview": if (!interviewReady()) break; if (ENG && !ENG.done) { leaveToHub(); } state.iv = newInterview(); Audio.play("paper"); state.ui = "interview"; renderUI(); ov.scrollTop = 0; break;
+    case "ivopt": if (state.iv.picked === null) { state.iv.sel = +id; Audio.play("click"); renderUI(); } break;
+    case "ivsubmit": interviewAnswer(); break;
+    case "ivnext": interviewNext(); ov.scrollTop = 0; break;
+    case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
+    case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
+    case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }
+    case "saveyou": { const nm = document.getElementById("yourname"); save.name = nm ? nm.value.trim().replace(/\s+/g, " ").slice(0, 16) : save.name; persist(); if (save.name) award("named"); Audio.play("stamp"); const nx = state.youNext; state.youNext = null; state.ui = nx || "hub"; renderUI(); break; }
     case "ladder": Audio.play("paper"); state.ui = "ladder"; renderUI(); break;
     case "resume": Audio.play("stamp"); startEngagement(save.cur[save.mode]); break;
     case "new": if (save.cur[save.mode]) { state.confirm = "new"; renderUI(); break; } Audio.play("stamp"); startEngagement(newEngagement(false)); break;
@@ -2274,6 +2443,7 @@ ov.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") &
 ov.addEventListener("submit", e => {
   e.preventDefault();
   if (e.target.matches('[data-form="ans"]')) submitTask();
+  if (e.target.matches('[data-form="you"]')) document.querySelector('[data-act="saveyou"]').click();
   if (e.target.matches('[data-form="mentor"]')) { const b = document.getElementById("mentorq"); const q = b.value; b.value = ""; askMentor(q); }
 });
 

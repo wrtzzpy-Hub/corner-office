@@ -6,8 +6,8 @@ const rankOf = xp => { let i = 0; while (i < RANKS.length - 1 && xp >= XP_AT[i +
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const hashStr = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const KEY = "tickandtie.v2";
-const blankCareer = () => ({ xp: 0, eng: 0, sumPct: 0, best: 0 });
-const freshSave = (m = true, s = true) => ({ v: 2, onboarded: false, mode: "casual", major: "Accounting", year: 1, careers: { casual: blankCareer(), student: blankCareer() }, daily: { casual: "", student: "" }, cur: { casual: null, student: null }, recent: { casual: [], student: [] }, music: m, sfx: s, coach: 0 });
+const blankCareer = () => ({ xp: 0, eng: 0, sumPct: 0, best: 0, rank: 0 });
+const freshSave = (m = true, s = true) => ({ v: 2, onboarded: false, mode: "casual", major: "Accounting", year: 1, careers: { casual: blankCareer(), student: blankCareer() }, daily: { casual: "", student: "" }, cur: { casual: null, student: null }, recent: { casual: [], student: [] }, music: m, sfx: s, coach: 0, name: "", color: "#2f6db3", streak: { n: 0, last: "", best: 0 }, badges: {} });
 function loadSave() { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.v === 2) return s; } catch (e) {} return null; }
 let save = loadSave() || freshSave();
 if (save.coach === undefined) save.coach = 0;
@@ -16,11 +16,11 @@ const career = () => save.careers[save.mode];
 const isStudent = () => save.mode === "student";
 /* Play for fun uses a beginner pool at the easiest tier; numeric answers become multiple choice with a tip on every task. */
 const CASUAL_IDS = new Set(["acc_classify", "acc_cutoff", "acc_count", "acc_materiality", "acc_baddebt", "acc_depr", "acc_prepaid", "fin_tvm", "fin_ratio", "fin_breakeven", "mkt_funnel", "mkt_classify", "mkt_campaign", "mkt_share", "mkt_pricing", "mgt_swot", "mgt_theory", "mgt_roster", "mgt_ops", "mgt_lead", "mgt_count", "eco_cpi", "eco_gdp", "eco_classify"]);
-function baseTier() { const rk = rankOf(career().xp); return isStudent() ? Math.min(4, YEAR_BASE[save.year] + Math.floor((rk + (save.year === 4 ? 2 : 0)) / 3)) : 1; }
+function baseTier() { const rk = curRank(); return isStudent() ? Math.min(4, YEAR_BASE[save.year] + Math.floor((rk + (save.year === 4 ? 2 : 0)) / 3)) : 1; }
 const ptsFor = tier => 100 + 25 * (tier - 1);
 const funTier = rk => rk <= 2 ? 1 : rk <= 4 ? 2 : 3;
 const engLength = rk => isStudent() ? Math.min(12, 6 + Math.floor(rk * .85)) : 4 + Math.floor(rk * .5);
-const bossTitle = () => { const rk = rankOf(career().xp); return rk < 4 ? "Manager" : rk < 6 ? "Director" : "Managing Partner"; };
+const bossTitle = () => { const rk = curRank(); return rk < 4 ? "Manager" : rk < 6 ? "Director" : "Managing Partner"; };
 
 /* ============================== CLIENTS & STATIONS ============================== */
 const INDUSTRIES = [
@@ -63,7 +63,7 @@ const KIND_AT = { calc: ["desk", "files"], classify: ["files", "desk"], flag: ["
 
 function newEngagement(daily) {
   const seed = daily ? hashStr(today() + save.mode + (isStudent() ? save.major + save.year : "")) : (Math.random() * 2 ** 31) | 0;
-  const r = mul32(seed), h = H(r), rk = rankOf(career().xp), tier = baseTier();
+  const r = mul32(seed), h = H(r), rk = curRank(), tier = baseTier();
   const n = daily ? (isStudent() ? 8 : 6) : engLength(rk);
   const ind = h.pick(INDUSTRIES), ex = h.pick(EXECS);
   const recent = new Set(save.recent[save.mode] || []), used = new Set(), list = [], majCount = {};

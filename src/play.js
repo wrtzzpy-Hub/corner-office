@@ -277,7 +277,7 @@ function drawCoach() {
 /* ============================== HUD ============================== */
 const hudEl = document.getElementById("hud"), objEl = document.getElementById("obj"), promptEl = document.getElementById("prompt"), tbtn = document.getElementById("tbtn");
 const esc = escH;
-function xpProgress() { const xp = career().xp, rk = rankOf(xp); if (rk === RANKS.length - 1) return { rk, pct: 100, need: 0 }; return { rk, pct: (xp - XP_AT[rk]) / (XP_AT[rk + 1] - XP_AT[rk]) * 100, need: XP_AT[rk + 1] - xp }; }
+function xpProgress() { const xp = career().xp, rk = curRank(); if (rk === RANKS.length - 1) return { rk, pct: 100, need: 0 }; return { rk, pct: Math.min(100, Math.max(0, (xp - XP_AT[rk]) / (XP_AT[rk + 1] - XP_AT[rk]) * 100)), need: Math.max(0, XP_AT[rk + 1] - xp) }; }
 function renderHud() {
   const pr = xpProgress(), inEng = ENG && !ENG.done && state.ui !== "hub" && !String(state.ui).startsWith("ob");
   hudEl.innerHTML = `<div class="brand">Corner <b>Office</b></div>
@@ -371,17 +371,22 @@ function submitTask() {
   else if (kind === "classify") { if (Object.keys(state.cls).length < d.items.length) { state.msg = "Choose a category for every item first."; return renderUI(); } let ok = 0; d.items.forEach((it, i) => { if (state.cls[i] === it.cat) ok++; }); frac = ok / d.items.length; res.given = { ...state.cls }; }
   const max = tk.key === "practice" ? 0 : ptsFor(tk.tier), mult = res.hint && isStudent() ? .75 : 1;
   Object.assign(res, { status: "done", frac, pts: Math.round(max * mult * frac), max });
-  if (tk.key !== "practice") storeEng();
+  if (tk.key !== "practice") storeEng(); else if (frac >= .99) award("practice");
+  if (kind === "count" && frac >= .99 && res.attempts === 1) award("eagle");
   Audio.play(frac >= .99 ? "good" : frac > 0 ? "stamp" : "bad"); if (frac >= .99) setTimeout(() => Audio.play("task"), 300);
   renderUI(); ov.scrollTop = ov.scrollHeight; if (tk.key !== "practice") rebuildInter();
 }
 function finishEngagement() {
   const items = [...ENG.list, ...(ENG.capT ? [ENG.capT] : [])];
   const score = items.reduce((s, t) => s + (ENG.res[t.key]?.pts || 0), 0), max = items.reduce((s, t) => s + ptsFor(t.tier), 0), pct = score / max * 100;
-  const xp = Math.round(score * (ENG.daily ? 1.5 : 1)), before = rankOf(career().xp);
+  const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak);
+  const xp = Math.round(score * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
   const cr = career(); cr.xp += xp; cr.eng += 1; cr.sumPct += pct; cr.best = Math.max(cr.best, Math.round(pct));
   if (ENG.daily) save.daily[save.mode] = ENG.date;
-  const after = rankOf(cr.xp);
-  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after };
+  const after = curRank(), noHint = items.every(t => !ENG.res[t.key]?.hint);
+  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after, streak, sb, newDay, interview: interviewReady(), justEarned: !wasReady && interviewEarned() };
+  const total = save.careers.casual.eng + save.careers.student.eng;
+  award("first"); if (pct >= 99.9) award("perfect"); if (noHint) award("nohint"); if (ENG.daily) award("daily");
+  if (streak >= 3) award("streak3"); if (streak >= 7) award("streak7"); if (total >= 10) award("jobs10"); if (total >= 25) award("jobs25");
   save.cur[save.mode] = null; persist(); ENG.done = true; openUI("report");
 }
