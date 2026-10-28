@@ -1150,20 +1150,20 @@ function buildWorld(cfg) {
     [0, 12, 5, 12, "glass"], [7, 12, 12, 12, "glass"], [12, 12, 17, 12, "glass"], [19, 12, 24, 12, "glass"], [24, 12, 29, 12, "wood"], [31, 12, 36, 12, "wood"],
     [12, 0, 12, 12, "solid"], [24, 0, 24, 12, "solid"], [0, 16, 3, 16, "solid"], [9, 16, 12, 16, "solid"], [12, 16, 20, 16, "solid"], [24, 16, 36, 16, "solid"], [12, 16, 12, 24, "solid"]];
   for (const [x1, z1, x2, z2, type] of W) {
-    const mx = (x1 + x2) / 2, mz = (z1 + z2) / 2, hz = z1 === z2, sx = hz ? x2 - x1 + .2 : .2, sz = hz ? .2 : z2 - z1 + .2;
+    const mx = (x1 + x2) / 2, mz = (z1 + z2) / 2, hz = z1 === z2, sx = hz ? x2 - x1 + .2 : .204, sz = hz ? .2 : z2 - z1 + .16;
     const stock = (mz === 24 && mx > 12) || (mx === 12 && mz > 16) || (mx === 36 && mz > 12);
     if (type === "glass") {
-      const prev = CUR; CUR = G; box(mx, .06, mz, sx, WALL_H - .06, .04, "#cfe3ee", { flat: true }); CUR = prev;
+      const prev = CUR; CUR = G; box(mx, .06, mz, x2 - x1, WALL_H - .06, .04, "#cfe3ee", { flat: true }); CUR = prev;
       colliders.push([mx - sx / 2, mz - .1, mx + sx / 2, mz + .1]);
-      box(mx, 0, mz, sx, .06, .12, "#2b313a", { flat: true }); box(mx, WALL_H - .12, mz, sx, .12, .12, "#2b313a", { flat: true });
+      box(mx, 0, mz, x2 - x1, .06, .12, "#2b313a", { flat: true }); box(mx, WALL_H - .12, mz, x2 - x1, .12, .12, "#2b313a", { flat: true });
       for (let x = x1; x <= x2 + .01; x += (x2 - x1) / Math.max(1, Math.round((x2 - x1) / 1.6))) box(x, 0, mz, .05, WALL_H, .1, "#2b313a", { flat: true });
-      box(mx, 1.05, mz, sx, .18, .05, "#ffffff", { em: .25, flat: true, tex: "white" });
+      box(mx, 1.05, mz, x2 - x1, .18, .05, "#ffffff", { em: .25, flat: true, tex: "white" });
       continue;
     }
     walls2d.push([x1, z1, x2, z2]);
     const wc = stock ? "#b7bbbf" : type === "wood" ? "#6f4b31" : P.wall;
     solid(mx, 0, mz, sx, WALL_H, sz, wc, { tex: type === "wood" ? "wood" : "plaster", tile: type === "wood" ? 1.2 : 2 });
-    box(mx, 0, mz, sx + (hz ? 0 : .04), .1, sz + (hz ? .04 : 0), stock ? "#5a5f66" : "#2d2a28", { flat: true });
+    box(mx, 0, mz, sx + (hz ? 0 : .04), hz ? .1 : .097, sz + (hz ? .04 : 0), stock ? "#5a5f66" : "#2d2a28", { flat: true });
   }
   // exterior windows (skyline) with mullions and sills
   const win = (axis, a0, a1, fixed, dir, uoff) => {
@@ -1180,7 +1180,7 @@ function buildWorld(cfg) {
   // door frames and headers
   [[5, 7, 12, "glass"], [17, 19, 12, "glass"], [29, 31, 12, "wood"], [3, 9, 16, "solid"], [20, 24, 16, "solid"]].forEach(([a, b, z, t]) => {
     if (t === "glass") { box((a + b) / 2, 2.5, z, b - a, WALL_H - 2.5, .12, "#2b313a", { flat: true }); return; }
-    box((a + b) / 2, 2.6, z, b - a, WALL_H - 2.6, .2, t === "wood" ? "#6f4b31" : z === 16 && a === 20 ? "#b7bbbf" : P.wall, { tex: t === "wood" ? "wood" : "plaster", tile: 1.2 });
+    box((a + b) / 2, 2.6, z, b - a - .004, WALL_H - 2.6, .196, t === "wood" ? "#6f4b31" : z === 16 && a === 20 ? "#b7bbbf" : P.wall, { tex: t === "wood" ? "wood" : "plaster", tile: 1.2 });
     box((a + b) / 2, 2.54, z, b - a + .16, .07, .26, P.accent, { flat: true, em: .15 }); [a, b].forEach(x => box(x, 0, z, .08, 2.6, .26, P.accent, { flat: true, em: .1 }));
   });
 
