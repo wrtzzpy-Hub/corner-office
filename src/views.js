@@ -112,6 +112,8 @@ const views = {
         <button class="btn" data-act="hq"><span>Walk around the office</span><small>${esc(WS_NAME[WS_OF(pr.rk)].toLowerCase())}, café, coworkers</small></button>
         ${conf ? `<div class="confirm paper" style="padding:12px"><p style="margin:0 0 8px">${conf === "reset" ? "Erase all progress in both modes? This can't be undone." : `Quit the current ${JOB()}? Its progress will be lost.`}</p><div class="row-btns"><button class="btn red" data-act="confirmyes">${conf === "reset" ? "Erase everything" : "Abandon it"}</button><button class="btn plain" data-act="confirmno" style="background:#fff">Cancel</button></div></div>` : ""}
         ${location.hash === "#dev" ? `<div class="paper devbox"><b>Tester tools</b><span>Jump to a rank to try its questions. Your next new ${JOB()} uses the new level.</span><div class="picks">${RANKS.map((n, i) => `<button class="pickb ${i === pr.rk ? "sel" : ""}" data-act="devrank" data-id="${i}">${n}</button>`).join("")}</div><button class="btn plain" data-act="deviv" style="margin-top:8px">Unlock the next interview</button></div>` : ""}
+        ${curRank() >= 3 || dealsList().length ? `<button class="btn ${openDeal() ? "red glow" : "ghost"}" data-act="inbox"><span>📧 Inbox</span><small>${openDeal() ? "1 new message" : "deals between your clients"}</small></button>` : ""}
+        <button class="btn ghost" data-act="clients"><span>Your clients</span><small>${activeClients().length} active</small></button>
         <button class="btn ghost" data-act="badges"><span>Badges</span><small>${Object.keys(save.badges).length}/${BADGES.length}</small></button>
         <button class="btn ghost" data-act="you"><span>Your profile</span><small>name and colour</small></button>
         <button class="btn ghost" data-act="ladder"><span>Career ladder</span></button>
@@ -126,6 +128,7 @@ const views = {
     <div class="npc-line"><div class="av" style="background:#2f3a4c">S</div><div>
     <h2>Today's ${JOB()}</h2>
     ${isStudent() ? `<p>"${hi("Welcome")}! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"${hi()}! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
+    ${clientBriefLine()}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
     <p class="label" style="color:var(--ink-dim)">${isTouch ? "Tap Tasks" : "Press T"} any time to see this list again.</p>
     <span class="sig">Sara</span><div style="margin-top:14px"><button class="btn red" data-act="briefed">Get to work</button></div></article>`,
@@ -176,6 +179,8 @@ const views = {
     return `<article class="paper fadein"><div class="letterhead"><div class="co">${isStudent() ? "Engagement report" : "Job report"}</div><div class="label">${esc(rp.client)} · ${esc(rp.service)}</div></div>
       <div class="score-top"><div><span class="label">Score</span><div class="bigscore num" id="bigscore">0</div><span class="label">of ${N(rp.max)} · ${Math.round(rp.pct)}%</span><div class="stars">${stars(rp.pct)}</div></div>
       <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${[rp.daily ? "daily 1.5×" : "", rp.sb ? `🔥 streak +${rp.sb}%` : ""].filter(Boolean).join(" · ") || esc(RANKS[rp.after])}</small></div></div>
+      ${clientReportHTML(rp.cu)}
+      ${rp.deal ? `<p class="clientline">📧 <b>New message:</b> ${esc(rp.deal.a)} and ${esc(rp.deal.b)} want your help with a deal. Check your inbox.</p>` : ""}
       ${rp.bonus ? `<p class="bonusline">⭐ <b>Bonus +${rp.bonus}:</b> ${rp.bonusList.map(b => esc(b.label)).join(", ")}</p>` : ""}
       ${rp.newDay ? `<p class="streakline">🔥 <b>${rp.streak}-day streak!</b> ${rp.streak > 1 ? `Play tomorrow to keep it going${rp.sb < 25 ? ` and raise your bonus to +${streakBonus(rp.streak + 1)}%` : ""}.` : "Come back tomorrow to start a streak and earn bonus XP."}</p>` : ""}
       ${rp.interview ? `<div class="ivcta"><b>${rp.justEarned ? "You've earned a promotion interview!" : "Your promotion interview is waiting."}</b><span>${esc(interviewer(rp.after + 1).name)} wants to see you about becoming <b>${RANKS[rp.after + 1]}</b>. Get 2 of 3 questions right to be promoted.</span></div>` : ""}
@@ -224,6 +229,30 @@ const views = {
       : `<div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="callsubmit" ${c.sel === null ? "disabled" : ""}>Answer</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
+  clients: () => { const all = Object.values(clientsMap()).sort((a, b) => (b.status === "active") - (a.status === "active") || b.trust - a.trust), deals = dealsList();
+    return `<article class="paper memo fadein"><div class="letterhead"><div class="co">Your clients</div><div class="label">${activeClients().length} active · rival: ${RIVAL}</div></div>
+    ${all.length ? `<div class="clist">${all.map(c => `<div class="crow ${c.status}"><div><b>${esc(c.name)}</b><small>${esc(INDUSTRIES[c.ind] ? INDUSTRIES[c.ind].ind : "")} · ${SIZE_NAMES[c.size]} · ${c.jobs} job${c.jobs > 1 ? "s" : ""}</small></div><div class="tbar"><i style="width:${c.trust}%;background:${c.trust >= 60 ? "var(--ok)" : c.trust >= 35 ? "var(--warn)" : "var(--tick)"}"></i></div><span class="tl2">${c.status === "rival" ? `Lost to ${RIVAL}` : `${c.trust} · ${trustLabel(c.trust)}`}</span></div>`).join("")}</div>` : `<p>No clients yet. Every company you help is added here.</p>`}
+    <p style="color:var(--ink-dim);font-size:14px;margin-top:12px">Score well and clients trust you more, come back for more work and grow their business. Score badly and they may leave for ${RIVAL}. Loyal clients (80+ trust) give +10% XP.</p>
+    ${deals.length ? `<h3 class="section-h">Deals</h3>${deals.slice().reverse().map(d => `<div class="crow"><div><b>${esc(d.a)} ↔ ${esc(d.b)}</b><small>${d.status === "open" ? `Step ${d.step + 1} of 3` : d.status === "signed" ? "Signed ✓" : "Fell through"}</small></div></div>`).join("")}` : ""}
+    <button class="btn red" data-act="hub">Back</button></article>`; },
+  inbox: () => {
+    const deal = state.dealQ && state.dealD ? state.dealD : openDeal();
+    if (!deal) return `<article class="paper memo fadein"><div class="letterhead"><div class="co">📧 Inbox</div><div class="label">No new messages</div></div><p>${curRank() >= 3 ? "Your clients send messages about deals with each other after your jobs. Check back after your next one." : "From <b>Senior Associate</b>, your clients start asking you to help with deals between their companies."}</p><button class="btn red" data-act="hub">Back</button></article>`;
+    const q = state.dealQ || (state.dealD = deal, state.dealQ = { ...dealQuestion(deal), picked: null, sel: null }), ans = q.picked !== null, ok = q.picked === q.correct;
+    const ended = ans && deal.status !== "open";
+    return `<section class="fadein"><article class="paper email">
+      <div class="letterhead"><div class="co">📧 ${esc(q.subject)}</div><div class="label">Deal step ${Math.min(3, deal.step + (ans ? 0 : 1))} of 3 · ${DEAL_STEPS[Math.min(2, ans ? deal.step - 1 : deal.step)]}</div></div>
+      <p class="mailhead"><b>From:</b> ${esc(q.from)}<br><b>To:</b> You (cc ${esc(q.to)})</p>
+      <p class="brief">${q.brief}</p>
+      ${q.table ? tableHTML(q.table, false, false, new Set(), null) : ""}
+      <p class="q">${esc(q.q)}</p>
+      <div class="choices">${q.options.map((o, i) => ans ? `<div class="choice ${i === q.correct ? "right" : i === q.picked ? "wrong" : "dim"}"><b>${i === q.correct ? "✓ " : i === q.picked ? "✗ " : ""}${esc(o)}</b></div>` : `<button class="choice ${q.sel === i ? "sel" : ""}" data-act="dealopt" data-id="${i}"><b>${esc(o)}</b></button>`).join("")}</div>
+      ${ans ? `<div class="result ${ok ? "good" : "bad"}"><div class="res-h"><b class="t">${ok ? "✓ Good advice" : "✗ Bad advice"}</b><span class="pts">${ok ? "+60 XP" : ""}</span></div><div class="howto"><ol>${stepsOf(q.explain).map(x => `<li>${x}</li>`).join("")}</ol></div></div>
+        ${ended ? `<p class="clientline ${deal.status === "signed" ? "" : "rival"}">${deal.status === "signed" ? `🤝 <b>Deal signed!</b> ${esc(deal.a)} and ${esc(deal.b)} are working together, and both trust you more.` : `💔 <b>The deal fell through.</b> You got ${deal.right} of 3 right. You need 2 for a deal to succeed.`}</p>` : `<p class="clientline">📨 The next message in this deal arrives after your next ${JOB()}.</p>`}
+        <div class="row-btns" style="margin-top:14px"><button class="btn red" data-act="hub">Done</button></div>`
+      : `<div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="dealsubmit" ${q.sel === null ? "disabled" : ""}>Send my advice</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
+    </article></section>`;
+  },
   badges: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Badges</div><div class="label">${Object.keys(save.badges).length} of ${BADGES.length} unlocked</div></div>
     <div class="badges">${BADGES.map(b => { const got = save.badges[b.id]; return `<div class="bdg ${got ? "got" : ""}"><span class="bi">${got ? b.ic : "🔒"}</span><b>${esc(b.name)}</b><small>${esc(b.how)}</small></div>`; }).join("")}</div>
     <p style="color:var(--ink-dim);font-size:14px;margin:12px 0">🔥 Best streak: <b>${save.streak.best}</b> day${save.streak.best === 1 ? "" : "s"}. Each day in a row adds +5% XP, up to +25%.</p>
@@ -242,12 +271,12 @@ function ladderHTML() { const rk = curRank(); return `<div class="ladder">${RANK
 function renderUI() {
   if (!ENG) ensureHQWorld();
   renderHud();
-  if (!["task", "interview", "call"].includes(state.ui) && calc.open) toggleCalc(false);
+  if (!["task", "interview", "call", "inbox"].includes(state.ui) && calc.open) toggleCalc(false);
   if (!state.ui) { ov.hidden = true; ov.innerHTML = ""; return; }
   ov.hidden = false; ov.innerHTML = `<div class="ov-inner">${views[state.ui]()}</div>`;
   if (state.ui === "report") countUp();
   if (state.ui === "task") { const a = document.getElementById("ans"); if (a && !isTouch && !calc.open) a.focus({ preventScroll: true }); }
-  if (!["task", "interview", "call"].includes(state.ui) && calc.open) toggleCalc(false); else renderCalc();
+  if (!["task", "interview", "call", "inbox"].includes(state.ui) && calc.open) toggleCalc(false); else renderCalc();
 }
 function countUp() {
   const target = state.report.score, el = document.getElementById("bigscore"), t0 = performance.now();
@@ -288,6 +317,10 @@ document.addEventListener("click", e => {
     case "evno": declineEvent(); break;
     case "callopt": if (state.call && state.call.picked === null) { state.call.sel = +id; Audio.play("click"); renderUI(); startCallTimer(); } break;
     case "callsubmit": if (state.call && state.call.sel !== null) finishCall(state.call.sel); break;
+    case "clients": Audio.play("paper"); state.ui = "clients"; renderUI(); ov.scrollTop = 0; break;
+    case "inbox": Audio.play("paper"); state.dealQ = null; state.ui = "inbox"; renderUI(); ov.scrollTop = 0; break;
+    case "dealopt": if (state.dealQ && state.dealQ.picked === null) { state.dealQ.sel = +id; Audio.play("click"); renderUI(); } break;
+    case "dealsubmit": if (state.dealQ && state.dealQ.sel !== null) answerDeal(state.dealQ.sel); break;
     case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
     case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
     case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }

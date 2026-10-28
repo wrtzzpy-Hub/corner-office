@@ -96,6 +96,7 @@ function newEngagement(daily) {
   const eng = { seed, daily, date: today(), tier, n: list.length, tasks: list, cap: capT ? { tpl: capT.id, tier: Math.max(capT.min, Math.min(capT.max, tier)) } : null,
     client: { name: h.pick(NAMES) + " " + ind.sfx, ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, stripe: ind.stripe, exec: ex[0], g: ex[1], role: isStudent() ? ROLE[save.major] : "CEO" },
     service: isStudent() ? SERVICE[save.major] : "Helping out for the day", palette: h.ri(0, 3), bay: h.ri(14, 23), res: {}, briefed: false };
+  chooseClient(eng, h, r);
   save.recent[save.mode] = [...list.map(t => t.tpl), ...(save.recent[save.mode] || [])].slice(0, 16);
   save.cur[save.mode] = eng; persist();
   return eng;

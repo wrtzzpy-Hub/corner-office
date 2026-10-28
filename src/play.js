@@ -57,7 +57,7 @@ function rebuildInter() {
   for (const c of CW) INTER.push({ id: "cw:" + c.id, cw: c, x: c.x, z: c.z, y: c.mesh.endsWith("_s") ? 1.55 : 2.0, ap: c.barista ? [45, 21.55] : [c.x, c.z], room: roomKey(c.x, c.z), label: `${c.name} · ${c.role}`, place: c.barista ? "the café" : c.office === "corner" ? "the corner office" : ROOMS.find(r => r.key === roomKey(c.x, c.z)).name.toLowerCase().replace(/^/, "the "), verb: c.barista ? (state.coffee === "fetch" ? "Pick up the coffee order" : "Order a coffee") : `Say hi to ${c.name.split(" ")[0]}`, reach: c.barista ? 2.6 : 2.2, cwTag: true });
   if (!ENG) {
     const hc = hqCfg(), ms = MYSPACE[hc.ws], ivw = interviewReady() ? interviewer(curRank() + 1) : null;
-    INTER.push({ id: "myspace", ...ms, label: hc.ws === "hot" ? "Hot desk · interns" : `${myName() || "You"} · ${RANKS[hc.rank]}`, verb: hc.ws === "hot" ? "Sit at the hot desk" : `Sit at ${WS_NAME[hc.ws].toLowerCase()}`, fixed: true, mine: true });
+    INTER.push({ id: "myspace", ...ms, label: hc.ws === "hot" ? "Hot desk · interns" : `${myName() || "You"} · ${RANKS[hc.rank]}`, verb: openDeal() ? "Check your inbox (1 new)" : hc.ws === "hot" ? "Sit at the hot desk" : `Sit at ${WS_NAME[hc.ws].toLowerCase()}`, fixed: true, mine: true });
     INTER.push({ id: "sara", ...FIXED.sara, label: `Sara · ${RANKS[Math.min(5, Math.max(4, curRank() + 1))]}`, verb: ivw && ivw.name === "Sara" ? "Start your promotion interview" : "Ask Sara for a job", fixed: true });
     INTER.push({ id: "khalid", x: NPCS.exec.x, z: NPCS.exec.z, y: 2.15, room: "exec", ap: STATIONS.exec.ap, reach: 4, label: "Khalid Haddad · Director", place: "the Executive suite", verb: ivw && ivw.name === "Khalid Haddad" ? "Start your promotion interview" : "Say hello to Khalid", fixed: true });
     const lay = CW.find(c => c.id === "layla"); if (lay && ivw && ivw.name === "Layla Haddad") { const it = INTER.find(i => i.id === "cw:layla"); it.verb = "Start your promotion interview"; it.ap = [45, 6.9]; it.reach = 3.9; }
@@ -192,6 +192,7 @@ function pickGuide() {
     if (!hqWalk()) return null;
     if (state.coffee === "fetch") return interById("cw:hamza");
     if (interviewReady()) return INTER.find(i => i.verb === "Start your promotion interview") || null;
+    if (openDeal()) return interById("myspace");
     if (!state.hqSeen) return interById("myspace");
     return interById("sara");
   }
@@ -371,7 +372,7 @@ function renderHud() {
   objEl.hidden = mini.hidden = !showWorldUI; document.getElementById("cross").hidden = !showWorldUI;
   if (showWorldUI && !ENG) {
     const hc = hqCfg(), iv = interviewReady() ? interviewer(hc.rank + 1) : null;
-    const items = [iv ? { t: `Promotion interview with ${iv.name}`, s: `to become ${RANKS[hc.rank + 1]}`, cur: true } : null, { t: `Visit ${WS_NAME[hc.ws].toLowerCase()}`, s: MYSPACE[hc.ws].place, cur: !iv && !state.hqSeen, done: state.hqSeen }, state.coffee === "fetch" ? { t: "Pick up the coffee order", s: "The Ledger Café", cur: true } : { t: "Grab a coffee", s: "The Ledger Café, east end", done: state.hadCoffee }, { t: "Talk to Sara to start a job", s: "Meeting room", cur: !iv && state.hqSeen }].filter(Boolean);
+    const items = [iv ? { t: `Promotion interview with ${iv.name}`, s: `to become ${RANKS[hc.rank + 1]}`, cur: true } : null, openDeal() ? { t: "📧 New message about a deal", s: `Check the inbox at ${WS_NAME[hc.ws].toLowerCase()}`, cur: !iv } : null, { t: `Visit ${WS_NAME[hc.ws].toLowerCase()}`, s: MYSPACE[hc.ws].place, cur: !iv && !state.hqSeen, done: state.hqSeen }, state.coffee === "fetch" ? { t: "Pick up the coffee order", s: "The Ledger Café", cur: true } : { t: "Grab a coffee", s: "The Ledger Café, east end", done: state.hadCoffee }, { t: "Talk to Sara to start a job", s: "Meeting room", cur: !iv && state.hqSeen }].filter(Boolean);
     objEl.innerHTML = `<h4><span>Haddad &amp; Partners HQ</span><span>${esc(RANKS[hc.rank])}</span></h4><ol>${items.map(i => `<li class="${i.cur ? "cur" : ""} ${i.done ? "done" : ""}"><span>${i.done ? "✓ " : ""}${esc(i.t)}${i.s ? `<small>${esc(i.s)}</small>` : ""}</span></li>`).join("")}</ol>`;
   } else if (showWorldUI) {
     let items;
@@ -417,7 +418,7 @@ function interact() {
     c.say = greetLine(c); c.sayT = 3.6; c.greeted = true; Audio.play("blip"); return;
   }
   if (!ENG) {
-    if (it.id === "myspace") { Audio.play("paper"); if (!state.hqSeen) { state.hqSeen = true; guideT = 0; } return openUI("desk"); }
+    if (it.id === "myspace") { Audio.play("paper"); if (!state.hqSeen) { state.hqSeen = true; guideT = 0; } if (openDeal()) { state.dealQ = null; return openUI("inbox"); } return openUI("desk"); }
     if (it.id === "sara") { Audio.play("click"); toast(`Sara: "${hi("Ready for work")}? Pick your next job."`); return openUI("hub"); }
     if (it.id === "khalid") { Audio.play("click"); toast(`Khalid: "${["Keep it up", "Good to see you", "The clients love your work"][Math.floor(Math.random() * 3)]}${myName() ? ", " + myName() : ""}!"`); return; }
   }
@@ -485,13 +486,15 @@ function finishEngagement() {
   const items = [...ENG.list, ...(ENG.capT ? [ENG.capT] : [])];
   const score = items.reduce((s, t) => s + (ENG.res[t.key]?.pts || 0), 0), max = items.reduce((s, t) => s + ptsFor(t.tier), 0), pct = score / max * 100;
   const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak), bonus = (ENG.bonus || []).reduce((a, b) => a + b.pts, 0);
-  const xp = Math.round((score + bonus) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
+  const cu = updateClient(ENG, pct);
+  const xp = Math.round((score + bonus) * (cu && cu.loyalBonus ? 1.1 : 1) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
   const cr = career(); cr.xp += xp; cr.eng += 1; cr.sumPct += pct; cr.best = Math.max(cr.best, Math.round(pct));
   if (ENG.daily) save.daily[save.mode] = ENG.date;
   const after = curRank(), noHint = items.every(t => !ENG.res[t.key]?.hint);
-  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after, bonus, bonusList: ENG.bonus || [], streak, sb, newDay, interview: interviewReady(), justEarned: !wasReady && interviewEarned() };
+  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after, cu, bonus, bonusList: ENG.bonus || [], streak, sb, newDay, interview: interviewReady(), justEarned: !wasReady && interviewEarned() };
   const total = save.careers.casual.eng + save.careers.student.eng;
   award("first"); if (pct >= 99.9) award("perfect"); if (noHint) award("nohint"); if (ENG.daily) award("daily");
   if (streak >= 3) award("streak3"); if (streak >= 7) award("streak7"); if (total >= 10) award("jobs10"); if (total >= 25) award("jobs25");
+  state.report.deal = maybeNewDealMessage();
   save.cur[save.mode] = null; persist(); ENG.done = true; openUI("report");
 }
