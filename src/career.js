@@ -70,10 +70,10 @@ function newEngagement(daily) {
   let countUsed = false;
   if (!isStudent()) {
     for (let i = 0; i < n; i++) {
-      const cand = FUN.filter(t => !used.has(t.id) && !(t.kind === "count" && countUsed)); if (!cand.length) break;
+      const ft = funTier(rk), cand = FUN.filter(t => t.min <= ft && !used.has(t.id) && !(t.kind === "count" && countUsed)); if (!cand.length) break;
       const lastKind = list.length ? TPL[list[list.length - 1].tpl].kind : null, fresh = cand.filter(t => !recent.has(t.id) && t.kind !== lastKind);
-      const t = h.pick(fresh.length ? fresh : cand); used.add(t.id); if (t.kind === "count") countUsed = true; majCount[t.major] = (majCount[t.major] || 0) + 1;
-      const ft = funTier(rk); list.push({ tpl: t.id, tier: Math.max(1, ft - (r() < .25 ? 1 : 0)) });
+      const pool = fresh.length ? fresh : cand, top = pool.filter(t => t.min === ft && ft > 1), t = h.pick(top.length && r() < .5 ? top : pool); used.add(t.id); if (t.kind === "count") countUsed = true; majCount[t.major] = (majCount[t.major] || 0) + 1;
+      list.push({ tpl: t.id, tier: Math.max(t.min, ft - (r() < .25 ? 1 : 0)) });
     }
   } else for (let i = 0; i < n; i++) {
     const major = r() < .7 ? save.major : h.pick(MAJORS.filter(m => m !== save.major));

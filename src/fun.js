@@ -126,4 +126,3 @@ fun({ id: "f_bigger", major: "Money", kind: "mcq", title: "Which earns more?", g
     return { brief: "On Saturday, " + parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] + ".", q: "Which one made the most money?", ...mcq(h, best, [...v.map(x => x.nm), "They made the same"], v.length + 1), hint: "Work out each total: how many × price.", explain: v.map(x => `${x.nm.replace("The ", "")}: ${x.n} × ${x.p} = ${A(x.t)}.`).join("<br>") + `<br>So <b>${best.toLowerCase()}</b> made the most.` };
   }
 } });
-for (const t of FUN) TPL[t.id] = t;

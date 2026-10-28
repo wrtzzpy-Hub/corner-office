@@ -254,5 +254,5 @@ function boot() {
   renderUI(); updatePrompt();
   requestAnimationFrame(frame);
 }
-if (location.hash === "#test") window.__tt = { get state() { return state; }, get save() { return save; }, get eng() { return ENG; }, get guide() { return guide; }, go(x, z, yaw, pitch = 0) { Object.assign(state.player, { x, z, yaw, pitch }); }, near: () => near && near.id, interact, newEngagement, startEngagement, finishEngagement, STATIONS, colliders: () => colliders, pathTo };
+if (location.hash === "#test") window.__tt = { get state() { return state; }, get save() { return save; }, get eng() { return ENG; }, get guide() { return guide; }, go(x, z, yaw, pitch = 0) { Object.assign(state.player, { x, z, yaw, pitch }); }, near: () => near && near.id, interact, newEngagement, startEngagement, finishEngagement, STATIONS, colliders: () => colliders, pathTo, openTask };
 boot();
