@@ -419,6 +419,10 @@ td,th{color:inherit}
 .chat{max-width:720px;margin:0 auto}.bubble-l,.bubble-r{display:flex;gap:10px;align-items:flex-end;margin:10px 0}.bubble-r{justify-content:flex-end}.bubble-l .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-display);flex:none}
 .bubble-l p,.bubble-r p{margin:0;padding:10px 14px;border-radius:16px;max-width:460px;line-height:1.4}.bubble-l p{background:#fff;box-shadow:0 1px 0 var(--rule);border-bottom-left-radius:4px}.bubble-r p{background:#2f6db3;color:#fff;border-bottom-right-radius:4px}.bubble-l small{display:block;color:var(--ink-dim);font-size:12px;margin:0 0 3px 4px}
 .chat-note{margin:8px 0 12px;font-weight:600;color:var(--ink-dim)}.chat-note.good{color:var(--ok)}.chat-note.bad{color:var(--tick)}.crow.pickc{width:100%;border:0;cursor:pointer;text-align:left;font:inherit}.crow.pickc:hover{box-shadow:0 0 0 2px var(--hi)}
+.season{margin:-6px -6px 12px;padding:8px 12px;border-radius:8px;background:linear-gradient(90deg,#fff1dc,#fde3c8);color:#7a3f12;font-size:13px}
+.decision{margin:16px 0 0;padding:14px;border-radius:10px;background:#f1f5ee;border:1.5px solid #c7d8c2}.decision p{margin:6px 0}
+.casefile{border-top:6px solid #1c2633}.suspects{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}.sus{position:relative;text-align:center;padding:10px 6px;border-radius:10px;background:#fff;box-shadow:0 2px 0 var(--rule)}.sus .av{display:grid;place-items:center;width:42px;height:42px;margin:0 auto 4px;border-radius:50%;background:#3a4a5e;color:#fff;font-family:var(--f-display);font-size:20px}.sus b{display:block}.sus small{color:var(--ink-dim);font-size:11px}.sus.out{opacity:.45}.sus.out i{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) rotate(-12deg);color:var(--tick);font:700 13px var(--f-display);text-transform:uppercase;border:2px solid var(--tick);padding:1px 6px;background:rgba(255,255,255,.8)}
+@media (max-width:560px){.suspects{grid-template-columns:repeat(2,1fr)}}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>

@@ -69,10 +69,10 @@ const FIXED = {
 };
 const KIND_AT = { calc: ["desk", "files"], classify: ["files", "desk"], flag: ["files", "desk"], mcq: ["npc", "desk"], count: ["bay"] };
 
-function newEngagement(daily) {
-  const seed = daily ? hashStr(today() + save.mode + (isStudent() ? save.major + save.year : "")) : (Math.random() * 2 ** 31) | 0;
+function newEngagement(daily, weekly) {
+  const seed = weekly ? hashStr(weekKey() + save.mode + (isStudent() ? save.major + save.year : "")) : daily ? hashStr(today() + save.mode + (isStudent() ? save.major + save.year : "")) : (Math.random() * 2 ** 31) | 0;
   const r = mul32(seed), h = H(r), rk = curRank(), tier = baseTier();
-  const n = daily ? (isStudent() ? 8 : 6) : engLength(rk);
+  const n = weekly ? 8 : daily ? (isStudent() ? 8 : 6) : engLength(rk);
   const ind = h.pick(INDUSTRIES), ex = h.pick(EXECS);
   const recent = new Set(save.recent[save.mode] || []), used = new Set(), list = [], majCount = {};
   let countUsed = false;
@@ -112,7 +112,7 @@ function newEngagement(daily) {
   const capT = isStudent() && tier >= 2 ? TEMPLATES.find(t => t.cap && t.major === capMajor) : null;
   const eng = { seed, daily, date: today(), tier, n: list.length, tasks: list, cap: capT ? { tpl: capT.id, tier: Math.max(capT.min, Math.min(capT.max, tier)) } : null,
     client: { name: h.pick(NAMES) + " " + ind.sfx, ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, stripe: ind.stripe, exec: ex[0], g: ex[1], role: isStudent() ? ROLE[save.major] : "CEO" },
-    office, service: office ? "Run from your office" : isStudent() ? SERVICE[save.major] : "Helping out for the day", palette: h.ri(0, 3), bay: h.ri(14, 23), res: {}, briefed: false };
+    office, weekly: !!weekly, service: weekly ? "Weekly challenge" : office ? "Run from your office" : isStudent() ? SERVICE[save.major] : "Helping out for the day", palette: h.ri(0, 3), bay: h.ri(14, 23), res: {}, briefed: false };
   chooseClient(eng, h, r);
   save.recent[save.mode] = [...list.map(t => t.tpl), ...(save.recent[save.mode] || [])].slice(0, 16);
   save.cur[save.mode] = eng; persist();

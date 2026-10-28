@@ -14,7 +14,7 @@ for (const b of BADGES) BADGE[b.id] = b;
 
 /* Called from newEngagement: decide whether this job is for a returning client, and whether the rival is pitching. */
 function chooseClient(eng, h, r) {
-  if (eng.daily) return;
+  if (eng.daily || eng.weekly) return;
   const act = activeClients();
   if (save.nextClient && clientsMap()[save.nextClient] && clientsMap()[save.nextClient].status === "active") { const c = clientsMap()[save.nextClient], ind = INDUSTRIES[c.ind], ex = EXECS[c.ex]; save.nextClient = null; eng.client = { name: c.name, ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, stripe: ind.stripe, exec: ex[0], g: ex[1], role: eng.client.role }; eng.palette = c.palette; eng.returning = true; eng.legend = c.legend; return; }
   if (act.length >= 2 && r() < .45) {
@@ -47,7 +47,7 @@ function clientBriefLine() {
 }
 /* Called from finishEngagement: update trust, growth, rival outcome. Returns lines for the report. */
 function updateClient(eng, pct) {
-  if (eng.daily) return null;
+  if (eng.daily || eng.weekly) return null;
   const map = clientsMap(); let c = map[eng.client.name], out = { name: eng.client.name };
   if (!c) { c = map[eng.client.name] = { met: today(), legend: !!eng.legend, name: eng.client.name, ind: INDUSTRIES.findIndex(i => i.ind === eng.client.ind), ex: EXECS.findIndex(e => e[0] === eng.client.exec), palette: eng.palette, trust: 50, jobs: 0, size: sizeOf(50), status: "active" }; out.isNew = true; }
   const before = c.trust, d = pct >= 85 ? 15 : pct >= 65 ? 8 : pct >= 45 ? -5 : -15;

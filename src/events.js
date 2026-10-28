@@ -15,7 +15,7 @@ function planEvent(eng) {
   if (eng.ev !== undefined) return;
   const r = mul32(eng.seed + 4242), h = H(r);
   const tutLeft = TUT_ORDER.filter(t => !save.tut[t]);
-  if (tutLeft.length && !eng.office && !eng.daily && eng.tasks.length >= 3) { const type = tutLeft[0]; eng.ev = { type, at: 1, status: "waiting", tut: TUT_ORDER.length - tutLeft.length + 1, spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 }; return; }
+  if (tutLeft.length && !eng.office && !eng.daily && !eng.weekly && eng.tasks.length >= 3) { const type = tutLeft[0]; eng.ev = { type, at: 1, status: "waiting", tut: TUT_ORDER.length - tutLeft.length + 1, spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 }; return; }
   if (eng.tasks.length < 4 || r() < .45) { eng.ev = null; return; }
   const sen = curRank() >= 5, type = eng.office ? h.pick(["call", "crisis", "crisis"]) : sen ? h.pick(["call", "crisis", "lost", "coffee"]) : h.pick(["call", "lost", "coffee"]);
   eng.ev = { type, at: 1 + Math.floor(r() * Math.min(3, eng.tasks.length - 2)), status: "waiting", spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 };

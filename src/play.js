@@ -437,6 +437,7 @@ function startEngagement(eng) {
   else { state.floor = "main"; Object.assign(NPCS.exec, { x: 30, z: 2.1, rot: 0, base: 0, onExec: false }); uploadWorld({ palette: eng.palette, bay: eng.bay, stripe: eng.client.stripe, seed: eng.seed, logo: eng.client.name }); }
   hqKey = ""; state.coffee = ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null;
   if (ENG.ev && ["offered", "call"].includes(ENG.ev.status)) ENG.ev.status = "waiting";
+  if (!ENG.briefed && !ENG.consequence) ENG.consequence = applyConsequence(ENG);
   Object.assign(state.player, eng.office && FLOOR === "exec" ? EXEC_SPOTS.arrive : eng.office ? (STATIONS.pcdesk.room === "corner" ? { x: 45, z: 9.2, yaw: 0, pitch: 0 } : { x: 39, z: 9.0, yaw: 0, pitch: 0 }) : SPAWN); moved = 0; rebuildInter();
   state.ui = null; renderUI(); updatePrompt();
   toast(ENG.office ? (ENG.briefed ? "Back in your office." : `Today's client: ${ENG.client.name}. Hind has your briefing.`) : ENG.briefed ? `Back at ${ENG.client.name}.` : `Welcome to ${ENG.client.name}. Sara is waiting in the meeting room.`);
@@ -534,7 +535,8 @@ function finishEngagement() {
   const score = items.reduce((s, t) => s + (ENG.res[t.key]?.pts || 0), 0), max = items.reduce((s, t) => s + ptsFor(t.tier), 0), pct = score / max * 100;
   const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak), bonus = (ENG.bonus || []).reduce((a, b) => a + b.pts, 0);
   const cu = updateClient(ENG, pct);
-  const xp = Math.round((score + bonus) * (cu && cu.loyalBonus ? 1.1 : 1) * (ENG.legend ? 1.25 : 1) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
+  const wkFirst = ENG.weekly ? recordWeekly(pct) : false, season = seasonNow();
+  const xp = Math.round((score + bonus) * (cu && cu.loyalBonus ? 1.1 : 1) * (ENG.legend ? 1.25 : 1) * (ENG.daily ? 1.5 : 1) * (wkFirst ? 2 : 1) * (season ? 1.1 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
   const cr = career(); cr.xp += xp; cr.eng += 1; cr.sumPct += pct; cr.best = Math.max(cr.best, Math.round(pct));
   if (ENG.daily) save.daily[save.mode] = ENG.date;
   const after = curRank(), noHint = items.every(t => !ENG.res[t.key]?.hint);
@@ -542,7 +544,8 @@ function finishEngagement() {
   const total = save.careers.casual.eng + save.careers.student.eng;
   award("first"); if (pct >= 99.9) award("perfect"); if (noHint) award("nohint"); if (ENG.daily) award("daily");
   if (streak >= 3) award("streak3"); if (streak >= 7) award("streak7"); if (total >= 10) award("jobs10"); if (total >= 25) award("jobs25");
-  state.report.deal = maybeNewDealMessage();
+  state.report.deal = maybeNewDealMessage(); state.report.decision = makeDecision(ENG); state.report.weekly = ENG.weekly ? { first: wkFirst, best: weeklyBest() } : null; state.report.season = season; state.report.story = storyReady();
+  if (season) award("season");
   state.report.cash = earn(Math.round(SALARY[curRank()] * Math.min(100, pct) / 100) + bonus);
   save.cur[save.mode] = null; persist(); ENG.done = true; openUI("report");
 }

@@ -102,7 +102,7 @@ const views = {
   hub: () => {
     const cr = career(), pr = xpProgress(), cur = save.cur[save.mode], dailyDone = save.daily[save.mode] === today(), conf = state.confirm;
     return `<div class="hub fadein">
-      <article class="paper"><div class="letterhead"><div class="co">Haddad &amp; Partners</div><div class="label">${isStudent() ? `${esc(save.major)} · Year ${save.year}` : "Play for fun"}</div></div>
+      <article class="paper">${seasonNow() ? `<div class="season">${seasonNow().ic} <b>${esc(seasonNow().name)}</b> · ${esc(seasonNow().note)}</div>` : ""}<div class="letterhead"><div class="co">Haddad &amp; Partners</div><div class="label">${isStudent() ? `${esc(save.major)} · Year ${save.year}` : "Play for fun"}</div></div>
         <div class="me-row">${avatarHTML(46)}<div><span class="label">${myName() ? esc(myName()) + " · your position" : "Your position"}</span><div class="h2" style="margin-top:2px">${esc(RANKS[pr.rk])}</div></div>${streakNow() ? `<div class="streak" title="Days in a row">🔥 ${streakNow()}<small>day${streakNow() > 1 ? "s" : ""}</small></div>` : ""}</div>
         <div class="bigbar"><i style="width:${pr.pct}%"></i></div>
         <p style="margin:0 0 12px;color:var(--ink-dim)">${pr.rk === RANKS.length - 1 ? "You made Partner. Keep playing to raise your average." : pr.need ? `${N(pr.need)} XP until your interview for <b>${RANKS[pr.rk + 1]}</b>` : `You've earned an interview for <b>${RANKS[pr.rk + 1]}</b>!`} · ${N(cr.xp)} XP total</p>
@@ -115,6 +115,8 @@ const views = {
         ${cur ? `<button class="btn ${interviewReady() ? "" : "red"}" data-act="resume"><span>Resume: ${esc(cur.client.name)}</span><small>${Object.values(cur.res).filter(r => r.status === "done").length}/${cur.tasks.length} done</small></button>` : ""}
         <button class="btn ${cur || interviewReady() ? "" : "red"}" data-act="new"><span>New ${JOB()}</span><small>${cur ? "replaces the current one" : "a new client"}</small></button>
         <button class="btn" data-act="daily" ${dailyDone ? "disabled" : ""}><span>Daily challenge</span><small>${dailyDone ? "done today ✓" : "1.5× XP"}</small></button>
+        <button class="btn" data-act="weekly"><span>🗓️ Weekly challenge</span><small>${weeklyBest() !== null ? `best ${weeklyBest()}% · beat it` : "8 tasks · 2× XP"}</small></button>
+        <button class="btn ${storyReady() ? "red glow" : "ghost"}" data-act="case"><span>📁 The Leak</span><small>${save.story.solved ? "case closed ✓" : storyReady() ? "new case file!" : `chapter ${save.story.ch + 1} of 4`}</small></button>
         <button class="btn ${boardReady() ? "" : ""}" data-act="board" ${boardReady() ? "" : "disabled"}><span>🏛️ Board meeting</span><small>${boardReady() ? "5 quick questions · big reward" : "done today ✓"}</small></button>
         <div class="mgrow"><button class="btn ghost" data-act="till"><span>🧾 Till rush</span><small>best ${save.best.till || 0}</small></button><button class="btn ghost" data-act="sortgame"><span>📦 Stock sort</span><small>best ${save.best.sort || 0}</small></button></div>
         <button class="btn" data-act="hq"><span>Walk around the office</span><small>${esc(WS_NAME[WS_OF(pr.rk)].toLowerCase())}, café, coworkers</small></button>
@@ -140,6 +142,7 @@ const views = {
     ${ENG.office ? `<p>"${hi("Good morning")}! Today's client is ${esc(ENG.client.name)}. You don't need to go anywhere: files come to <b>your computer</b>, visitors and candidates will come to <b>your office</b>, and calls come through as <b>video calls</b>. ${ENG.list.some(t => t.auto) ? "Ravi is already counting the stock for you. " : ""}Anything with legwork, send to your team from the task list, then review what they hand back. Come and see me when the day's done."</p>` : curRank() === 4 ? `<p class="clientline">👥 <b>You're a Manager now.</b> Open the task list (${isTouch ? "tap Tasks" : "press T"}) and press <b>Send</b> to hand up to 2 tasks to your team. They'll bring the work back for you to review, so you walk less.</p>` : ""}
     ${isStudent() ? `<p>"${hi("Welcome")}! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"${hi()}! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
     ${ENG.legend ? `<p class="clientline legend">👑 <b>Legendary client!</b> ${esc(ENG.client.name)} is one of the biggest names in the city. This job pays 25% more XP.</p>` : ""}
+    ${ENG.consequence ? `<p class="clientline ${ENG.consequence.ok ? "" : "rival"}">🧭 <b>Last time you advised: "${esc(ENG.consequence.pick)}".</b> ${esc(ENG.consequence.ok ? ENG.consequence.win : ENG.consequence.lose)} Trust ${ENG.consequence.before} → ${ENG.consequence.after}.</p>` : ""}
     ${clientBriefLine()}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
     <p class="label" style="color:var(--ink-dim)">${isTouch ? "Tap Tasks" : "Press T"} any time to see this list again.</p>
@@ -194,11 +197,15 @@ const views = {
       <div class="score-top"><div><span class="label">Score</span><div class="bigscore num" id="bigscore">0</div><span class="label">of ${N(rp.max)} · ${Math.round(rp.pct)}%</span><div class="stars">${stars(rp.pct)}</div></div>
       <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${[rp.daily ? "daily 1.5×" : "", rp.sb ? `🔥 streak +${rp.sb}%` : ""].filter(Boolean).join(" · ") || esc(RANKS[rp.after])}</small></div></div>
       <p class="cashline">💰 <b>+${A(rp.cash)}</b> salary${rp.bonus ? " and bonus" : ""} · you have ${A(save.cash)}</p>
+      ${rp.weekly ? `<p class="clientline">🗓️ <b>Weekly challenge:</b> ${Math.round(rp.pct)}% · your best this week: ${rp.weekly.best}%${rp.weekly.first ? " · first try pays 2× XP!" : ""} <button class="btn plain sm" data-act="shareweekly">Share my score</button></p>` : ""}
+      ${rp.season ? `<p class="clientline">${rp.season.ic} <b>${esc(rp.season.name)}:</b> +10% XP</p>` : ""}
+      ${rp.story ? `<p class="clientline rival">📁 <b>New case file!</b> Someone is leaking secrets to ${RIVAL}. Open "The Leak" from the menu.</p>` : ""}
       ${clientReportHTML(rp.cu)}
       ${rp.deal ? `<p class="clientline">📧 <b>New message:</b> ${esc(rp.deal.a)} and ${esc(rp.deal.b)} want your help with a deal. Check your inbox.</p>` : ""}
       ${rp.bonus ? `<p class="bonusline">⭐ <b>Bonus +${rp.bonus}:</b> ${rp.bonusList.map(b => esc(b.label)).join(", ")}</p>` : ""}
       ${rp.newDay ? `<p class="streakline">🔥 <b>${rp.streak}-day streak!</b> ${rp.streak > 1 ? `Play tomorrow to keep it going${rp.sb < 25 ? ` and raise your bonus to +${streakBonus(rp.streak + 1)}%` : ""}.` : "Come back tomorrow to start a streak and earn bonus XP."}</p>` : ""}
       ${rp.interview ? `<div class="ivcta"><b>${rp.justEarned ? "You've earned a promotion interview!" : "Your promotion interview is waiting."}</b><span>${esc(interviewer(rp.after + 1).name)} wants to see you about becoming <b>${RANKS[rp.after + 1]}</b>. Get 2 of 3 questions right to be promoted.</span></div>` : ""}
+      ${decisionHTML(rp)}
       <h3 class="section-h">Task by task</h3><p style="margin:-4px 0 10px;color:var(--ink-dim);font-size:14px">Tap a task to see how it's solved.</p>
       <div class="stack">${rp.items.map(t => `<details ${t.frac < .99 ? "open" : ""}><summary><span>${t.frac >= .99 ? "✓" : t.frac > 0 ? "½" : "✗"} ${esc(t.title)}${t.cap ? " (final)" : ""}</span><span class="num">${t.pts}/${t.max}</span></summary><ol class="steps">${stepsOf(t.explain).map(s => `<li>${s}</li>`).join("")}</ol><p class="key"><b>Remember:</b> ${esc(t.hint)}</p></details>`).join("")}</div>
       <div class="feedback-cta"><b>Testing the game?</b> Tell me what you thought. It takes 2 minutes. <a class="btn" href="${FEEDBACK_URL}" target="_blank" rel="noopener">Give feedback</a></div>
@@ -291,7 +298,7 @@ const views = {
 };
 const PERKS = ["", "You get your own desk with your nameplate.", "Your desk gets a plant and a photo frame.", "You get your own private office.", "Your office gets a whiteboard, and you can now delegate tasks to your team.", "You move up to the private Executive Floor, with your own assistant, lounge and boardroom.", "Clients now come to you. Host lunches in your private dining room.", "A gold trophy for your desk. You've made it to the top."];
 const perkLine = rk => PERKS[rk] || "";
-Object.assign(views, mgViews(), { chat: () => chatView() });
+Object.assign(views, mgViews(), { chat: () => chatView(), case: () => caseView() });
 function ladderHTML() { const rk = curRank(); return `<div class="ladder">${RANKS.map((n, i) => `<div class="rung ${i === rk ? "me" : i < rk ? "past" : ""}"><span class="n">${i + 1}</span><b>${n}${i === rk ? " · you" : ""}</b><span class="x">${N(XP_AT[i])} XP</span></div>`).reverse().join("")}</div>`; }
 
 function renderUI() {
@@ -363,6 +370,11 @@ document.addEventListener("click", e => {
     case "chatopt": chatAnswer(+id); break;
     case "chatnext": chatNext(); break;
     case "chatdone": state.chat = null; Audio.play("paper"); if (!ENG && hqWalk()) closeUI(); else { state.ui = "hub"; renderUI(); } break;
+    case "weekly": if (save.cur[save.mode]) { state.confirm = "weekly"; renderUI(); break; } Audio.play("stamp"); startEngagement(newEngagement(false, true)); break;
+    case "case": Audio.play("paper"); state.caseRes = null; state.ui = "case"; renderUI(); ov.scrollTop = 0; break;
+    case "caseans": caseAnswer(id); break;
+    case "decide": decide(+id); break;
+    case "shareweekly": shareWeekly(); break;
     case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
     case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
     case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }
@@ -375,7 +387,7 @@ document.addEventListener("click", e => {
     case "confirmno": state.confirm = null; renderUI(); break;
     case "confirmyes": { const c = state.confirm; state.confirm = null;
       if (c === "reset") { save = freshSave(save.music, save.sfx); persist(); state.ui = "ob0"; renderUI(); }
-      else { save.cur[save.mode] = null; persist(); Audio.play("stamp"); startEngagement(newEngagement(c === "daily")); }
+      else { save.cur[save.mode] = null; persist(); Audio.play("stamp"); startEngagement(newEngagement(c === "daily", c === "weekly")); }
       break; }
     case "briefed": ENG.briefed = true; storeEng(); if (save.coach < 2) { save.coach = 2; persist(); } Audio.play("task"); closeUI(); break;
     case "tasks": if (ENG) { Audio.play("paper"); openUI("overview"); } break;
