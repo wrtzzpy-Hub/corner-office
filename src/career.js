@@ -54,6 +54,13 @@ const STATIONS = {
   ravi: { x: 30.5, z: 19.6, y: 2.1, kind: "npc", cap: 2, place: "Ravi in the Stockroom", room: "stock", ap: [30.5, 21.1] },
   bay: { x: 28, z: 23.3, y: 2.9, kind: "bay", reach: 3.4, place: "Bay C in the Stockroom", room: "stock", ap: [28, 21.8] },
 };
+const BASE_STATIONS = {}; for (const [k, v] of Object.entries(STATIONS)) BASE_STATIONS[k] = { ...v };
+function useStations(set) { for (const k of Object.keys(STATIONS)) delete STATIONS[k]; for (const [k, v] of Object.entries(set)) STATIONS[k] = { ...v }; }
+function officeStations(ws) {
+  return ws === "corner" ? { pcdesk: { x: 44.3, z: 5.0, y: 1.5, kind: "desk", cap: 99, reach: 2.6, place: "your computer", room: "corner", ap: [44.3, 6.7] }, exec: { x: 45.8, z: 6.0, y: 1.75, kind: "npc", cap: 99, reach: 2.6, place: "your visitor chairs", room: "corner", ap: [46.3, 7.6] } }
+    : { pcdesk: { x: 39.6, z: 4.7, y: 1.5, kind: "desk", cap: 99, reach: 2.6, place: "your computer", room: "office", ap: [39.9, 6.4] }, exec: { x: 38.4, z: 5.55, y: 1.75, kind: "npc", cap: 99, reach: 2.6, place: "your visitor chairs", room: "office", ap: [37.9, 7.1] } };
+}
+const HIND_SPOT = { x: 42.8, z: 12.45, y: 1.6, room: "corr", ap: [42.8, 14.1], reach: 3, place: "Hind, your assistant" };
 const FIXED = {
   sara: { x: 10.1, z: 5.2, y: 2.05, room: "meet", ap: [10.4, 7.3], reach: 3.5, place: "Sara in the meeting room" },
   mariam: { x: 1.2, z: 20.4, y: 2.0, room: "lobby", ap: [3.8, 20.4], reach: 3.3, place: "Reception" },
@@ -85,9 +92,17 @@ function newEngagement(daily) {
     used.add(t.id); if (t.kind === "count") countUsed = true; majCount[t.major] = (majCount[t.major] || 0) + 1;
     list.push({ tpl: t.id, tier: Math.max(t.min, Math.min(t.max, tt)) });
   }
+  const office = curRank() >= 5;
+  if (office) {
+    useStations(officeStations(WS_OF(curRank())));
+    const pool = h.shuf(SENIOR.slice()); let k = 0;
+    for (let i = 2; i < list.length && k < pool.length; i += 2) { const T = pool[k++]; list[i] = { tpl: T.id, tier: Math.max(1, Math.min(isStudent() ? 4 : 3, isStudent() ? tier : funTier(rk) + 1)) }; }
+    for (const t of list) { const T = TPL[t.tpl]; if (T.kind === "count") { t.st = "pcdesk"; t.auto = "Ravi"; } else if (T.senior) t.st = T.via === "visitor" ? "exec" : "pcdesk"; else if (T.kind === "mcq") { if (h.ri(0, 1)) t.st = "exec"; else { t.st = "pcdesk"; t.video = true; } } else t.st = "pcdesk"; }
+  } else useStations(BASE_STATIONS);
   const free = {}; for (const [id, s] of Object.entries(STATIONS)) free[id] = s.cap || 1;
   const order = h.shuf(Object.keys(STATIONS));
   for (const t of list) {
+    if (t.st) continue;
     const kd = TPL[t.tpl].kind, ord = (kd === "mcq" || kd === "flag") && h.ri(0, 9) < 4 ? [...KIND_AT[kd]].reverse() : KIND_AT[kd];
     for (const k of ord) { const st = order.find(id => STATIONS[id].kind === k && free[id] > 0 && !(k === "npc" && id === "ravi" && free.exec > 0)); if (st) { t.st = st; free[st]--; break; } }
     if (!t.st) { const st = order.find(id => ["desk", "files"].includes(STATIONS[id].kind) && free[id] > 0); t.st = st; free[st]--; }
@@ -96,7 +111,7 @@ function newEngagement(daily) {
   const capT = isStudent() && tier >= 2 ? TEMPLATES.find(t => t.cap && t.major === capMajor) : null;
   const eng = { seed, daily, date: today(), tier, n: list.length, tasks: list, cap: capT ? { tpl: capT.id, tier: Math.max(capT.min, Math.min(capT.max, tier)) } : null,
     client: { name: h.pick(NAMES) + " " + ind.sfx, ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, stripe: ind.stripe, exec: ex[0], g: ex[1], role: isStudent() ? ROLE[save.major] : "CEO" },
-    service: isStudent() ? SERVICE[save.major] : "Helping out for the day", palette: h.ri(0, 3), bay: h.ri(14, 23), res: {}, briefed: false };
+    office, service: office ? "Run from your office" : isStudent() ? SERVICE[save.major] : "Helping out for the day", palette: h.ri(0, 3), bay: h.ri(14, 23), res: {}, briefed: false };
   chooseClient(eng, h, r);
   save.recent[save.mode] = [...list.map(t => t.tpl), ...(save.recent[save.mode] || [])].slice(0, 16);
   save.cur[save.mode] = eng; persist();

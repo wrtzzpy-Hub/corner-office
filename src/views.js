@@ -5,9 +5,14 @@ const JOB = () => isStudent() ? "engagement" : "job";
 const KIND_IC = { calc: "123", mcq: "?", flag: "✗", classify: "≡", count: "#" };
 const stars = pct => pct >= 85 ? "★★★" : pct >= 65 ? "★★☆" : pct >= 40 ? "★☆☆" : "☆☆☆";
 const kindName = t => t.d && t.d.asChoice ? "Pick the answer" : KIND_NAME[t.T.kind];
+const JUNIORS = ["Omar", "Lina", "Noura", "Sami"];
+function freeJunior() { const busy = new Set(Object.values(ENG.res).filter(r => r.status === "delegated" || r.status === "review").map(r => r.by)); return JUNIORS.find(j => !busy.has(j)); }
 function taskRow(t) {
   const r = ENG.res[t.key], done = r && r.status === "done";
-  return `<div class="tl ${done ? "done" : ""} ${t.key === "cap" ? "cap" : ""}"><span class="ic">${done ? "✓" : KIND_IC[t.T.kind]}</span><div><b>${esc(t.T.title)}</b><small>${esc(t.T.major)} · ${kindName(t)} · ${esc(t.key === "cap" ? "Sara, meeting room" : STATIONS[t.st].place)}</small></div><span class="st">${done ? `${r.pts}/${r.max}` : `${ptsFor(t.tier)} pts`}</span></div>`;
+  if (r && r.status === "delegated") return `<div class="tl away"><span class="ic">⏳</span><div><b>${esc(t.T.title)}</b><small>${esc(r.by)} is working on it · back in about ${Math.max(5, Math.ceil((r.readyAt - Date.now()) / 1000))} s</small></div><span class="st">delegated</span></div>`;
+  if (r && r.status === "review") return `<div class="tl rev"><span class="ic">📥</span><div><b>Review: ${esc(t.T.title)}</b><small>${esc(r.by)} has finished. Check it before it goes to the client.</small></div><button class="btn red sm" data-act="review" data-id="${t.key}">Review</button></div>`;
+  const canSend = state.ui === "overview" && ENG.briefed && canDelegate() && !done && delegable(t) && delegUsed() < delegLimit() && freeJunior();
+  return `<div class="tl ${done ? "done" : ""} ${t.key === "cap" ? "cap" : ""}"><span class="ic">${done ? "✓" : KIND_IC[t.T.kind]}</span><div><b>${esc(t.T.title)}</b><small>${esc(t.T.major)} · ${kindName(t)} · ${esc(t.key === "cap" ? "Sara, meeting room" : STATIONS[t.st].place)}</small></div>${canSend ? `<button class="btn plain sm" data-act="delegate" data-id="${t.key}" title="Send a junior to do it">Send ${freeJunior()}</button>` : `<span class="st">${done ? `${r.pts}/${r.max}${r.reviewed ? " · reviewed" : ""}` : `${ptsFor(t.tier)} pts`}</span>`}</div>`;
 }
 function tableHTML(tb, flaggable, done, wrong, given) {
   const g = new Set(given || []);
@@ -129,13 +134,14 @@ const views = {
       </div></div>`;
   },
   brief: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">${esc(ENG.client.name)}</div><div class="label">${ENG.daily ? "Daily challenge · " : ""}${esc(ENG.service)}</div></div>
-    <div class="npc-line"><div class="av" style="background:#2f3a4c">S</div><div>
+    <div class="npc-line"><div class="av" style="background:#2f3a4c">${ENG.office ? "H" : "S"}</div><div>
     <h2>Today's ${JOB()}</h2>
+    ${ENG.office ? `<p>"${hi("Good morning")}! Today's client is ${esc(ENG.client.name)}. You don't need to go anywhere: files come to <b>your computer</b>, visitors and candidates will come to <b>your office</b>, and calls come through as <b>video calls</b>. ${ENG.list.some(t => t.auto) ? "Ravi is already counting the stock for you. " : ""}Anything with legwork, send to your team from the task list, then review what they hand back. Come and see me when the day's done."</p>` : curRank() === 4 ? `<p class="clientline">👥 <b>You're a Manager now.</b> Open the task list (${isTouch ? "tap Tasks" : "press T"}) and press <b>Send</b> to hand up to 2 tasks to your team. They'll bring the work back for you to review, so you walk less.</p>` : ""}
     ${isStudent() ? `<p>"${hi("Welcome")}! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"${hi()}! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
     ${clientBriefLine()}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
     <p class="label" style="color:var(--ink-dim)">${isTouch ? "Tap Tasks" : "Press T"} any time to see this list again.</p>
-    <span class="sig">Sara</span><div style="margin-top:14px"><button class="btn red" data-act="briefed">Get to work</button></div></article>`,
+    <span class="sig">${ENG.office ? "Hind" : "Sara"}</span><div style="margin-top:14px"><button class="btn red" data-act="briefed">Get to work</button></div></article>`,
   overview: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Task list</div><div class="label">${esc(ENG.client.name)} · ${doneCount()}/${ENG.list.length} done</div></div>
     ${ENG.briefed && !allTasksDone() && near && near.id === "sara" ? `<p>"You still have ${ENG.list.length - doneCount()} to go. Follow the arrow and come back when they're done."</p>` : ""}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
@@ -148,6 +154,7 @@ const views = {
   },
   task: () => {
     const tk = taskByKey(state.task), d = tk.d, kind = tk.T.kind, res = resOf(tk.key), done = res.status === "done", prac = tk.key === "practice", choice = kind === "mcq" || d.asChoice;
+    if (res.status === "review" || res.reviewed) return reviewView(tk);
     if (isPC(tk)) return pcView(tk);
     const who = tk.key === "cap" ? "Sara" : tk.st === "exec" ? ENG.client.exec : tk.st === "ravi" ? "Ravi" : null;
     let input = "";
@@ -225,7 +232,7 @@ const views = {
   call: () => {
     const c = state.call, ans = c.picked !== null, ok = c.picked === c.correct, cl = ENG.client;
     return `<section class="fadein"><article class="paper callcard">
-      <div class="letterhead"><div class="co">📞 ${esc(cl.exec)} on the line</div><div class="label">${ans ? (ok ? `+${EV_BONUS.call} bonus` : "No bonus") : `<span id="calltime" class="calltime">${Math.max(0, Math.ceil((c.end - performance.now()) / 1000))}s</span>`}</div></div>
+      <div class="letterhead"><div class="co">${c.crisis ? "🚨 Crisis on your desk" : `📞 ${esc(cl.exec)} on the line`}</div><div class="label">${ans ? (ok ? `+${EV_BONUS.call} bonus` : "No bonus") : `<span id="calltime" class="calltime">${Math.max(0, Math.ceil((c.end - performance.now()) / 1000))}s</span>`}</div></div>
       <p class="brief">${c.brief}</p>
       ${c.facts ? `<div class="facts">${c.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}
       ${c.table ? tableHTML(c.table, false, false, new Set(), null) : ""}
@@ -366,6 +373,10 @@ document.addEventListener("click", e => {
     case "opt": state.sel = +id; Audio.play("click"); renderUI(); break;
     case "flagrow": { const i = +id; state.picks.has(i) ? (state.picks.delete(i), Audio.play("unstamp")) : (state.picks.add(i), Audio.play("stamp")); renderUI(); break; }
     case "submit": case "submitpc": submitTask(); break;
+    case "delegate": { const j = freeJunior(); if (j) { delegate(id, j); Audio.play("stamp"); toast(`📤 ${j} is on “${taskByKey(id).T.title}”.`); renderUI(); } break; }
+    case "review": Audio.play("paper"); openTask(id); break;
+    case "approve": submitReview(true); break;
+    case "sendback": submitReview(false); break;
     case "cell": { state.cell = id; Audio.play("click"); ov.querySelectorAll(".grid .sel").forEach(x => x.classList.remove("sel")); t.classList.add("sel"); const nm = ov.querySelector(".fxbar .nm"), fv = ov.querySelector(".fv"); if (nm) nm.textContent = id; if (fv) fv.textContent = t.textContent; break; }
     case "calc": toggleCalc(); renderUI(); break;
     case "hint": { const res = resOf(taskByKey(state.task).key); if (!res.hint && state.task !== "practice") { res.hint = true; storeEng(); } state.hintOpen = true; Audio.play("paper"); renderUI(); break; }

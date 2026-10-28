@@ -8,12 +8,12 @@ const LOST = [
   { thing: "sunglasses", x: 33.6, z: 10.2, y: .45, hint: "on the coffee table in the Executive suite" },
   { thing: "notebook", x: 7.1, z: 21.9, y: .42, hint: "on the round table in the Lobby" },
 ];
-const EV_BONUS = { call: 50, lost: 40, coffee: 30 };
+const EV_BONUS = { call: 50, lost: 40, coffee: 30, crisis: 80 };
 function planEvent(eng) {
   if (eng.ev !== undefined) return;
   const r = mul32(eng.seed + 4242), h = H(r);
   if (eng.tasks.length < 4 || r() < .2) { eng.ev = null; return; }
-  const type = h.pick(["call", "lost", "coffee"]);
+  const sen = curRank() >= 5, type = eng.office ? h.pick(["call", "crisis", "crisis"]) : sen ? h.pick(["call", "crisis", "lost", "coffee"]) : h.pick(["call", "lost", "coffee"]);
   eng.ev = { type, at: 1 + Math.floor(r() * Math.min(3, eng.tasks.length - 2)), status: "waiting", spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 };
 }
 const evOf = () => ENG && ENG.ev;
@@ -22,19 +22,20 @@ function syncEv() { const e = save.cur[save.mode]; if (e && ENG) { e.ev = ENG.ev
 function maybeFireEvent() {
   const ev = evOf(); if (!ev || ev.status !== "waiting" || !ENG.briefed || doneCount() < ev.at || allTasksDone()) return false;
   ev.status = "offered"; syncEv();
-  if (ev.type === "call") { Audio.play("ring"); setTimeout(() => Audio.play("ring"), 1300); }
+  if (ev.type === "call" || ev.type === "crisis") { Audio.play("ring"); setTimeout(() => Audio.play("ring"), 1300); }
   else Audio.play("blip");
   openUI("event"); return true;
 }
 function eventCard() {
   const ev = evOf(), c = ENG.client, lost = LOST[ev.spot];
+  if (ev.type === "crisis") return { who: "Hind", role: "Your assistant", av: "H", col: "#2f3a4c", h: "🚨 We have a problem!", body: `"${hi("Sorry to interrupt")}, something urgent has come up and it needs your decision right now. You'll have 30 seconds."`, yes: "Deal with it", no: "Ignore it", bonus: EV_BONUS.crisis };
   if (ev.type === "call") return { who: c.exec, role: c.role, av: c.exec[0], col: "#1c2633", h: "📞 Urgent call!", body: `"${hi("Hello")}! It's ${esc(firstName(c.exec))}. I've got a quick question and I need an answer in the next 30 seconds."`, yes: "Answer the phone", no: "Let it ring", bonus: EV_BONUS.call };
   if (ev.type === "lost") return { who: "Mariam", role: "Reception", av: "M", col: "#5a4a30", h: `A visitor lost their ${lost.thing}`, body: `"${hi("Excuse me")}! A visitor left their <b>${lost.thing}</b> somewhere. They think it's ${lost.hint}. Could you find it and bring it to me at reception?"`, yes: "I'll look for it", no: "Not now", bonus: EV_BONUS.lost };
   return { who: "Sara", role: bossTitle(), av: "S", col: "#2f3a4c", h: "Coffee run?", body: `"I'm buried in work${myName() ? ", " + esc(myName()) : ""}. Could you pick up the team's coffee order from the café at the east end and bring it to me in the meeting room?"`, yes: "Sure!", no: "Not now", bonus: EV_BONUS.coffee };
 }
 function acceptEvent() {
   const ev = evOf(); if (!ev) return;
-  if (ev.type === "call") { ev.status = "call"; syncEv(); state.call = makeCall(); Audio.play("click"); openUI("call"); startCallTimer(); return; }
+  if (ev.type === "call" || ev.type === "crisis") { ev.status = "call"; syncEv(); state.call = ev.type === "crisis" ? makeCrisis() : makeCall(); Audio.play("click"); openUI("call"); startCallTimer(); return; }
   ev.status = ev.type === "lost" ? "search" : "fetch"; syncEv(); Audio.play("stamp"); closeUI(); guideT = 0;
   toast(ev.type === "lost" ? `Find the ${LOST[ev.spot].thing}: ${LOST[ev.spot].hint}.` : "Head to the café at the east end of the corridor.");
 }
@@ -63,7 +64,7 @@ function startCallTimer() {
 function finishCall(choice) {
   const c = state.call, ev = evOf(); if (!c || c.picked !== null) return;
   clearInterval(callTimer); c.picked = choice; const ok = choice === c.correct;
-  ev.status = ok ? "won" : "lost"; if (ok) bonusAdd("Urgent call", EV_BONUS.call); syncEv();
+  ev.status = ok ? "won" : "lost"; if (ok) bonusAdd(c.crisis ? "Handled a crisis" : "Urgent call", c.crisis ? EV_BONUS.crisis : EV_BONUS.call); syncEv();
   Audio.play(ok ? "good" : "bad"); renderUI();
 }
 

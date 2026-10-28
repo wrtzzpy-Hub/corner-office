@@ -392,6 +392,13 @@ body.pcmode #ov{background:none;padding:0;overflow:hidden}
 .pdfpage tr.flagged td{background:rgba(220,40,40,.06);border-top:2.5px solid #d22!important;border-bottom:2.5px solid #d22!important}.pdfpage tr.flagged td:first-child{border-left:2.5px solid #d22;border-radius:22px 0 0 22px}.pdfpage tr.flagged td:last-child{border-right:2.5px solid #d22;border-radius:0 22px 22px 0}.pdfpage table{border-collapse:separate;border-spacing:0 3px}
 body.pcmode #calc{right:7vw;bottom:70px;border-top:28px solid #2b3445;border-radius:10px}
 @media (max-width:760px){.pc{padding:0 0 26px}.pc-row{gap:0}.monitor.side{display:none}.monitor .screen{border-width:6px 6px 10px;border-radius:6px}.monitor .stand{display:none}.pc-desk .mug,.pc-desk .sticky{display:none}.win{left:0;right:0;top:0;border-radius:0}.sheetbody{flex-direction:column;overflow:auto}.brief-note{flex:none;max-height:none;border-right:0;border-bottom:1px solid #e5dca8}.gridwrap{flex:none;overflow:auto}.mail-list{display:none}.wall span{font-size:40px}.ribbon span:not(.on):not(.rt){display:none}}
+.btn.sm{padding:6px 12px;font-size:13px;min-height:0;flex:none}.tl.away{opacity:.7}.tl.rev{background:#fff6d6}
+.junior{display:flex;align-items:center;gap:14px;margin:12px 0;padding:14px;border-radius:10px;background:#fff;border:2px dashed #3a4a5e}.junior span{color:var(--ink-dim);font-size:13px;text-transform:uppercase;letter-spacing:.05em}.junior b{font-size:22px;font-family:Consolas,Menlo,monospace}
+.vc{flex:1;display:flex;min-height:0;background:#111}.vc-feed{position:relative;flex:1.1;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#2f3a4c,#0d1117)}.vc-live{position:absolute;top:12px;left:12px;font-size:12px;color:#fff;background:rgba(0,0,0,.5);padding:3px 8px;border-radius:4px}.vc-face{text-align:center;color:#fff}.vc-face .av{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;margin:0 auto 10px;background:#1c2633;border:3px solid #4fc3f7;font:48px var(--f-display);color:#fff;animation:talk 1.4s ease-in-out infinite}.vc-face b{display:block;font-size:18px}.vc-face small{opacity:.7}
+@keyframes talk{50%{box-shadow:0 0 0 8px rgba(79,195,247,.25)}}
+.vc-me{position:absolute;right:12px;bottom:56px;width:110px;height:80px;border-radius:8px;background:#222;display:grid;place-items:center;border:1px solid #444;color:#aaa;font-size:11px}.vc-bar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:10px}.vc-bar span{width:36px;height:36px;border-radius:50%;background:#333;display:grid;place-items:center}.vc-bar .end{background:#d22}
+.vc-chat{flex:1;overflow:auto;padding:14px 16px;background:#fff}.vc-chat .choice.reply{max-width:none}
+@media (max-width:760px){.vc{flex-direction:column;overflow:auto}.vc-feed{flex:none;height:200px}.vc-face .av{width:70px;height:70px;font-size:30px}.vc-chat{flex:none;overflow:visible}}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>
@@ -1219,6 +1226,13 @@ const STATIONS = {
   ravi: { x: 30.5, z: 19.6, y: 2.1, kind: "npc", cap: 2, place: "Ravi in the Stockroom", room: "stock", ap: [30.5, 21.1] },
   bay: { x: 28, z: 23.3, y: 2.9, kind: "bay", reach: 3.4, place: "Bay C in the Stockroom", room: "stock", ap: [28, 21.8] },
 };
+const BASE_STATIONS = {}; for (const [k, v] of Object.entries(STATIONS)) BASE_STATIONS[k] = { ...v };
+function useStations(set) { for (const k of Object.keys(STATIONS)) delete STATIONS[k]; for (const [k, v] of Object.entries(set)) STATIONS[k] = { ...v }; }
+function officeStations(ws) {
+  return ws === "corner" ? { pcdesk: { x: 44.3, z: 5.0, y: 1.5, kind: "desk", cap: 99, reach: 2.6, place: "your computer", room: "corner", ap: [44.3, 6.7] }, exec: { x: 45.8, z: 6.0, y: 1.75, kind: "npc", cap: 99, reach: 2.6, place: "your visitor chairs", room: "corner", ap: [46.3, 7.6] } }
+    : { pcdesk: { x: 39.6, z: 4.7, y: 1.5, kind: "desk", cap: 99, reach: 2.6, place: "your computer", room: "office", ap: [39.9, 6.4] }, exec: { x: 38.4, z: 5.55, y: 1.75, kind: "npc", cap: 99, reach: 2.6, place: "your visitor chairs", room: "office", ap: [37.9, 7.1] } };
+}
+const HIND_SPOT = { x: 42.8, z: 12.45, y: 1.6, room: "corr", ap: [42.8, 14.1], reach: 3, place: "Hind, your assistant" };
 const FIXED = {
   sara: { x: 10.1, z: 5.2, y: 2.05, room: "meet", ap: [10.4, 7.3], reach: 3.5, place: "Sara in the meeting room" },
   mariam: { x: 1.2, z: 20.4, y: 2.0, room: "lobby", ap: [3.8, 20.4], reach: 3.3, place: "Reception" },
@@ -1250,9 +1264,17 @@ function newEngagement(daily) {
     used.add(t.id); if (t.kind === "count") countUsed = true; majCount[t.major] = (majCount[t.major] || 0) + 1;
     list.push({ tpl: t.id, tier: Math.max(t.min, Math.min(t.max, tt)) });
   }
+  const office = curRank() >= 5;
+  if (office) {
+    useStations(officeStations(WS_OF(curRank())));
+    const pool = h.shuf(SENIOR.slice()); let k = 0;
+    for (let i = 2; i < list.length && k < pool.length; i += 2) { const T = pool[k++]; list[i] = { tpl: T.id, tier: Math.max(1, Math.min(isStudent() ? 4 : 3, isStudent() ? tier : funTier(rk) + 1)) }; }
+    for (const t of list) { const T = TPL[t.tpl]; if (T.kind === "count") { t.st = "pcdesk"; t.auto = "Ravi"; } else if (T.senior) t.st = T.via === "visitor" ? "exec" : "pcdesk"; else if (T.kind === "mcq") { if (h.ri(0, 1)) t.st = "exec"; else { t.st = "pcdesk"; t.video = true; } } else t.st = "pcdesk"; }
+  } else useStations(BASE_STATIONS);
   const free = {}; for (const [id, s] of Object.entries(STATIONS)) free[id] = s.cap || 1;
   const order = h.shuf(Object.keys(STATIONS));
   for (const t of list) {
+    if (t.st) continue;
     const kd = TPL[t.tpl].kind, ord = (kd === "mcq" || kd === "flag") && h.ri(0, 9) < 4 ? [...KIND_AT[kd]].reverse() : KIND_AT[kd];
     for (const k of ord) { const st = order.find(id => STATIONS[id].kind === k && free[id] > 0 && !(k === "npc" && id === "ravi" && free.exec > 0)); if (st) { t.st = st; free[st]--; break; } }
     if (!t.st) { const st = order.find(id => ["desk", "files"].includes(STATIONS[id].kind) && free[id] > 0); t.st = st; free[st]--; }
@@ -1261,7 +1283,7 @@ function newEngagement(daily) {
   const capT = isStudent() && tier >= 2 ? TEMPLATES.find(t => t.cap && t.major === capMajor) : null;
   const eng = { seed, daily, date: today(), tier, n: list.length, tasks: list, cap: capT ? { tpl: capT.id, tier: Math.max(capT.min, Math.min(capT.max, tier)) } : null,
     client: { name: h.pick(NAMES) + " " + ind.sfx, ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, stripe: ind.stripe, exec: ex[0], g: ex[1], role: isStudent() ? ROLE[save.major] : "CEO" },
-    service: isStudent() ? SERVICE[save.major] : "Helping out for the day", palette: h.ri(0, 3), bay: h.ri(14, 23), res: {}, briefed: false };
+    office, service: office ? "Run from your office" : isStudent() ? SERVICE[save.major] : "Helping out for the day", palette: h.ri(0, 3), bay: h.ri(14, 23), res: {}, briefed: false };
   chooseClient(eng, h, r);
   save.recent[save.mode] = [...list.map(t => t.tpl), ...(save.recent[save.mode] || [])].slice(0, 16);
   save.cur[save.mode] = eng; persist();
@@ -1527,6 +1549,120 @@ function answerDeal(choice) {
   if (deal.step >= 3) { deal.status = deal.right >= 2 ? "signed" : "failed"; if (deal.status === "signed") { award("dealmaker"); for (const n of [deal.a, deal.b]) if (map[n]) map[n].trust = Math.min(100, map[n].trust + 10); } }
   if (typeof onDealAnswered === "function") onDealAnswered(ok, deal);
   persist(); Audio.play(ok ? "good" : "bad"); renderUI();
+}
+/* ============================== SENIOR WORK ==============================
+   Real-world duties for senior ranks: approvals and sign-offs, hiring, team reviews and bonuses, crises.
+   via: "pc" arrives on your computer, "visitor" walks into your office. */
+const SENIOR = [];
+const sr = t => { const T = { min: 1, max: 4, major: "Leadership", senior: true, ...t }; SENIOR.push(T); TPL[T.id] = T; };
+const TEAM = ["Omar", "Lina", "Sami", "Noura", "Dana", "Ali", "Faisal"];
+
+sr({ id: "sr_signoff", kind: "mcq", via: "pc", title: "Sign off the contract", gen(r) {
+  const h = H(r), sup = h.pick(["Gulf Supplies", "Marina Traders", "Desert Wholesale", "Oasis Goods"]), what = h.pick(["cleaning", "IT support", "security", "catering", "printing"]);
+  const monthly = h.pick([2500, 3000, 3500, 4000, 4500]), months = h.pick([12, 18, 24]), setup = h.pick([0, 2000, 5000, 8000]), total = monthly * months + setup, budget = Math.round((total + h.pick([-1, 1]) * h.pick([4000, 6000, 9000])) / 1000) * 1000;
+  const ok = total <= budget, ans = ok ? "Sign it: it fits the budget" : "Don't sign: it's over budget";
+  return { brief: `${sup} wants a ${months}-month ${what} contract. The finance team has approved a budget of <b>${A(budget)}</b> for the whole contract.`, table: { cols: ["Term", "Amount"], align: ["", "r"], rows: [["Monthly fee", A(monthly)], ["Length", months + " months"], ["One-off setup fee", setup ? A(setup) : "None"]] }, q: "The contract is on your desk for sign-off. What do you do?", ...mcq(h, ans, ["Sign it: it fits the budget", "Don't sign: it's over budget", "Sign it: the monthly fee is low"], 3), hint: "Work out the full cost: monthly fee × months + setup fee. Compare it with the budget.", explain: `Total: ${N(monthly)} × ${months} + ${N(setup)} = ${A(total)}.<br>Budget: ${A(budget)}.<br>So: <b>${ans}</b>.` };
+} });
+sr({ id: "sr_expense", kind: "mcq", via: "pc", title: "Approve the expenses", gen(r) {
+  const h = H(r), ppl = h.pickN(TEAM, 4), cap = h.pick([150, 200, 250]), bad = h.ri(0, 3), types = ["Client lunch", "Taxi", "Train ticket", "Hotel night", "Printer ink"];
+  const rows = ppl.map((p, i) => { const t = h.pick(types); return [p, t, A(i === bad ? cap + h.ri(20, 120) : h.ri(40, cap - 10)), i === bad || r() < .8 ? "Yes" : "Yes"]; });
+  const miss = h.pick([0, 1, 2, 3].filter(i => i !== bad)), noRec = r() < .5;
+  if (noRec) rows[miss][3] = "No";
+  const wrongOnes = [bad, ...(noRec ? [miss] : [])], ask = noRec ? "Which TWO claims break the rules?" : "Which claim breaks the rules?";
+  const label = i => ppl[i], opts = noRec ? [`${label(bad)} and ${label(miss)}`, `${label(bad)} only`, `${label(miss)} only`, "Nobody: approve them all"] : ppl;
+  const ans = noRec ? opts[0] : label(bad);
+  return { brief: `Your team's expense claims need your approval. Company rules:<br>• No single claim over <b>${A(cap)}</b><br>• Every claim needs a receipt`, table: { cols: ["Name", "For", "Amount", "Receipt?"], align: ["", "", "r", ""], rows }, q: ask, ...mcq(h, ans, opts, 4), hint: "Check every row against BOTH rules: the amount limit and the receipt.", explain: `${label(bad)}'s claim is over ${A(cap)}.${noRec ? `<br>${label(miss)} has no receipt.` : ""}<br>Everything else follows the rules, so approve those.` };
+} });
+sr({ id: "sr_hire", kind: "mcq", via: "visitor", title: "Hire a new analyst", gen(r) {
+  const h = H(r), names = h.pickN(["Yousef", "Maryam", "Karim", "Reem", "Tariq", "Huda", "Adel"], 4), maxPay = h.pick([9000, 10000, 12000]), minScore = h.pick([60, 65, 70]);
+  for (let k = 0; k < 60; k++) {
+    const rows = names.map(n => [n, h.ri(45, 95), h.ri(0, 5), maxPay + h.pick([-3000, -2000, -1000, 0, 1000, 2000])]);
+    const fit = rows.filter(x => x[1] >= minScore && x[3] <= maxPay); if (!fit.length) continue;
+    const best = fit.reduce((a, b) => b[1] > a[1] ? b : a); if (fit.filter(x => x[1] === best[1]).length > 1) continue;
+    const top = rows.reduce((a, b) => b[1] > a[1] ? b : a); if (top === best) continue;
+    return { brief: `Four candidates came in for interviews today. You can pay at most <b>${A(maxPay)}</b> a month, and they need at least <b>${minScore}</b> on the skills test. Pick the highest scorer who meets both rules.`, table: { cols: ["Candidate", "Test score", "Years' experience", "Salary asked"], align: ["", "r", "r", "r"], rows: rows.map(x => [x[0], x[1], x[2], A(x[3])]) }, q: "Who do you hire?", ...mcq(h, best[0], names, 4), hint: "Cross out anyone who scored too low or asks for too much. Then pick the best score left.", explain: rows.map(x => `${x[0]}: ${x[1] < minScore ? "score too low ✗" : x[3] > maxPay ? "asks too much ✗" : "meets both rules ✓"}`).join("<br>") + `<br>Best of the rest: <b>${best[0]}</b> (${best[1]}). ${top[0]} scored higher but ${top[3] > maxPay ? "asks too much" : "didn't pass"}.` };
+  }
+} });
+sr({ id: "sr_bonus", kind: "calc", via: "pc", title: "Split the bonus pool", gen(r) {
+  const h = H(r), ppl = h.pickN(TEAM, 3), pts = h.pick([[5, 3, 2], [4, 4, 2], [6, 3, 1], [5, 4, 1], [3, 2, 1]]), unit = h.pick([1000, 1500, 2000, 500]), tot = pts.reduce((a, b) => a + b, 0), pool = tot * unit, who = h.ri(0, 2), a = pts[who] * unit;
+  return { brief: `You have a bonus pool of <b>${A(pool)}</b> for your team. It's shared out by performance points: each point is worth the same.`, table: { cols: ["Team member", "Performance points"], align: ["", "r"], rows: ppl.map((p, i) => [p, pts[i]]) }, q: `How much bonus does ${ppl[who]} get?`, answer: a, unit: "AED", wrongs: wr(a, [pool / 3, pts[who] * 1000, a + unit, pool - a, a / 2]), hint: "Add up all the points. Divide the pool by that to find what one point is worth.", explain: `Total points: ${pts.join(" + ")} = ${tot}.<br>One point: ${N(pool)} ÷ ${tot} = ${A(unit)}.<br>${ppl[who]}: ${pts[who]} × ${N(unit)} = <b>${A(a)}</b>.` };
+} });
+sr({ id: "sr_review", kind: "mcq", via: "pc", title: "Team performance review", gen(r) {
+  const h = H(r), ppl = h.pickN(TEAM, 4);
+  for (let k = 0; k < 60; k++) {
+    const tg = ppl.map(() => h.pick([20, 25, 40, 50, 80, 100])), act = tg.map(t => Math.round(t * (h.ri(80, 140) / 100))), pct = act.map((a, i) => Math.round((a / tg[i] - 1) * 100));
+    const mx = Math.max(...pct); if (pct.filter(p => p === mx).length > 1) continue;
+    const best = pct.indexOf(mx); if (act.indexOf(Math.max(...act)) === best) continue;
+    return { brief: "It's review season. Here are your team's sales targets and results for the quarter.", table: { cols: ["Name", "Target", "Actual"], align: ["", "r", "r"], rows: ppl.map((p, i) => [p, tg[i], act[i]]) }, q: "Who beat their own target by the biggest percentage?", ...mcq(h, ppl[best], ppl, 4), hint: "Biggest number isn't the answer. For each person: (actual − target) ÷ target.", explain: ppl.map((p, i) => `${p}: ${act[i] - tg[i] >= 0 ? "+" : ""}${act[i] - tg[i]} on ${tg[i]} = ${pct[i] >= 0 ? "+" : ""}${pct[i]}%`).join("<br>") + `<br>So <b>${ppl[best]}</b> did best against their target.` };
+  }
+} });
+sr({ id: "sr_budgetcut", kind: "calc", via: "pc", title: "Cut the budget", gen(r) {
+  const h = H(r), depts = h.pickN(["Marketing", "IT", "Travel", "Training", "Events"], 3), vals = depts.map(() => h.pick([20, 30, 40, 50, 60, 80]) * 1000), cut = h.pick([10, 20, 25]), protect = h.ri(0, 2), rest = vals.filter((_, i) => i !== protect).reduce((a, b) => a + b, 0), total = vals.reduce((a, b) => a + b, 0), target = total * cut / 100, pctRest = Math.round(target / rest * 10000) / 100;
+  if (pctRest !== Math.round(pctRest * 10) / 10) return this.gen(mul32((r() * 1e9) | 0));
+  return { brief: `The board wants the total budget cut by <b>${cut}%</b>. But ${depts[protect]} can't be cut at all, so the other two departments share the cut by the same percentage.`, table: { cols: ["Department", "Budget"], align: ["", "r"], rows: depts.map((d, i) => [d, A(vals[i])]) }, q: "By what percentage must the other two departments be cut?", answer: pctRest, unit: "%", wrongs: wr(pctRest, [cut, cut * 1.5, cut / 2, pctRest + 5, Math.round(target / total * 100)]), hint: `First find ${cut}% of the TOTAL budget. Then see what % that is of the two departments you can cut.`, explain: `Total: ${A(total)}. ${cut}% of that = ${A(target)}.<br>The two cuttable departments: ${A(rest)}.<br>${N(target)} ÷ ${N(rest)} = <b>${pctRest}%</b>.` };
+} });
+sr({ id: "sr_pitch", kind: "mcq", via: "visitor", title: "Win the client", gen(r) {
+  const h = H(r), S = h.pick([
+    ["A new client asks why they should pick your firm over Falcon Advisory, which is 20% cheaper.", "Show what you've achieved for similar clients and offer a clear plan", ["Cut your price by 30% straight away", "Say Falcon Advisory is terrible", "Promise results you can't guarantee"], "Clients pay for value they can see. Evidence and a plan beat a price war or bad-mouthing a rival."],
+    ["A client wants their project finished in half the usual time, at the same price.", "Explain what's possible and offer options: more people for a higher fee, or a smaller first phase", ["Agree, and hope the team can manage", "Refuse and end the meeting", "Agree, then quietly cut quality"], "Good leaders are honest about trade-offs and give the client a real choice."],
+    ["A client asks you to change a report so their sales look bigger for the bank.", "Refuse politely and explain you can only report the true numbers", ["Do it this once", "Do it but don't sign your name", "Ask the junior to do it instead"], "Changing numbers to mislead a bank is dishonest and illegal. Your firm's reputation depends on trust."],
+    ["A long-time client is unhappy about a late delivery and says they might leave.", "Apologise, explain what went wrong and what you've changed so it won't happen again", ["Blame your team", "Offer free work forever", "Tell them everyone is late sometimes"], "Owning the mistake and showing the fix keeps trust."]]);
+  return { brief: S[0], q: "What do you say?", ...mcq(h, S[1], S[2]), hint: "Think long term: honesty and trust matter more than winning one argument.", explain: `<b>${S[1]}</b>.<br>${S[3]}` };
+} });
+
+/* ---------- crises (senior events) ---------- */
+const CRISES = [
+  ["🚨 A customer's angry video about your client is going viral.", "Reply publicly and calmly, apologise, and explain how you'll fix it", ["Ignore it and hope it goes away", "Argue with the customer in the comments", "Delete the company's social media"]],
+  ["🚨 IT says an employee emailed a file of customer details to the wrong person.", "Contact the person to delete it, tell your manager and IT, and inform affected customers", ["Say nothing and hope nobody notices", "Fire the employee on the spot", "Delete all the company's emails"]],
+  ["🚨 Your client's main supplier has just gone out of business.", "Contact backup suppliers today and tell customers about any delays", ["Wait a month to see what happens", "Stop selling everything", "Tell customers nothing has changed"]],
+  ["🚨 Your best analyst resigns two days before a big deadline.", "Thank them, plan a handover, and share the work fairly across the team", ["Make the team work all night without a plan", "Ask the client to cancel the project", "Do nothing and miss the deadline"]],
+  ["🚨 A big order was priced at AED 1,000 instead of AED 10,000 by mistake, and the customer has already accepted.", "Call the customer, explain the mistake honestly, and agree a fair solution", ["Ship it and send a surprise bill later", "Cancel the order without telling them", "Blame the customer for the mistake"]],
+  ["🚨 The office internet is down and a client presentation starts in 20 minutes.", "Switch to a phone hotspot, send the slides by email, and warn the client you might be a few minutes late", ["Cancel the meeting with no explanation", "Wait and hope it comes back", "Present without any slides or numbers"]],
+];
+function makeCrisis() {
+  const h = H(mul32((Math.random() * 2 ** 31) | 0)), c = h.pick(CRISES), o = mcq(h, c[1], c[2]);
+  return { crisis: true, title: "Crisis", brief: c[0], q: "You have 30 seconds. What do you do first?", options: o.options, correct: o.correct, explain: `<b>${c[1]}</b>.<br>In a crisis, act fast, be honest, and tell the people affected.`, end: performance.now() + 30000, sel: null, picked: null, timedOut: false };
+}
+
+/* ---------- delegation and review (Manager and up) ---------- */
+const canDelegate = () => curRank() >= 4;
+const delegLimit = () => ENG && ENG.office ? 4 : 2;
+const delegUsed = () => ENG ? Object.values(ENG.res).filter(r => r.by).length : 0;
+const isAway = k => { const r = ENG && ENG.res[k]; return !!r && (r.status === "delegated" || r.status === "review"); };
+const delegable = t => t.key !== "cap" && ["calc", "mcq", "count"].includes(t.T.kind) && !t.T.senior;
+function delegate(key, who) {
+  const t = taskByKey(key), res = resOf(key); if (!t || res.status !== "todo" && res.status !== undefined) return;
+  Object.assign(res, { status: "delegated", by: who, readyAt: Date.now() + (who === "Ravi" ? 20000 : 25000 + Math.random() * 20000) });
+  storeEng(); rebuildInter(); renderHud();
+}
+function checkDelegated() {
+  if (!ENG || ENG.done) return;
+  for (const t of ENG.list) { const r = ENG.res[t.key]; if (r && r.status === "delegated" && Date.now() >= r.readyAt) { r.status = "review"; storeEng(); Audio.play("ping"); toast(`📥 ${r.by} finished “${t.T.title}”. Review it: ${isTouch ? "tap Tasks" : "press T"}.`); renderHud(); if (state.ui === "overview") renderUI(); } }
+}
+function juniorAnswer(t) {
+  const res = ENG.res[t.key], r = mul32(hashStr(t.key + ENG.seed + res.by)), right = r() < (res.by === "Sami" ? .45 : .62), d = t.d;
+  if (d.options) { const wrong = d.options.map((_, i) => i).filter(i => i !== d.correct); return { right, text: d.options[right ? d.correct : wrong[Math.floor(r() * wrong.length)]] }; }
+  if (right) return { right, text: fmtAns(d.answer, d.unit) };
+  const w = d.wrongs && d.wrongs.length ? d.wrongs[Math.floor(r() * d.wrongs.length)] : t.T.kind === "count" ? d.answer + (r() < .5 ? -1 : 1) * (1 + Math.floor(r() * 3)) : d.answer * (r() < .5 ? .9 : 1.1);
+  return { right, text: fmtAns(w, d.unit) };
+}
+function submitReview(approve) {
+  const t = taskByKey(state.task), res = resOf(t.key), j = juniorAnswer(t), ok = approve === j.right, max = ptsFor(t.tier);
+  Object.assign(res, { status: "done", frac: ok ? 1 : 0, pts: ok ? max : 0, max, reviewed: true, approve, juniorRight: j.right });
+  storeEng(); Audio.play(ok ? "good" : "bad"); renderUI(); rebuildInter();
+}
+function reviewView(t) {
+  const d = t.d, res = resOf(t.key), j = juniorAnswer(t), done = res.status === "done";
+  return `<section class="fadein"><div class="ov-top"><div class="row-btns"><button class="btn ghost" data-act="close">← Back</button></div><span class="hint2">Reviewing ${esc(res.by)}'s work</span></div><article class="paper">
+    <div class="chips-row"><span class="chipx k">Review</span><span class="chipx">${esc(t.T.major)}</span><span class="chipx">${ptsFor(t.tier)} pts</span></div>
+    <h3 class="h2" style="font-size:30px">${esc(t.T.title)}</h3>
+    <div class="npc-line"><div class="av" style="background:#3a4a5e">${esc(res.by[0])}</div><p class="brief">"${res.by === "Ravi" ? "I've counted the stock for you." : "Here's my work. Can you check it before it goes to the client?"}"</p></div>
+    <p class="brief">${d.brief}</p>${d.facts ? `<div class="facts">${d.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}${d.table ? tableHTML(d.table, false, false, new Set(), null) : ""}
+    <p class="q">${esc(d.q)}</p>
+    <div class="junior"><span>${esc(res.by)}'s answer</span><b>${esc(j.text)}</b></div>
+    ${!done ? `<p class="instr">Work it out yourself. If ${esc(res.by)} is right, approve it. If not, send it back.</p><div class="row-btns"><button class="btn red" data-act="approve">✓ Approve</button><button class="btn plain" data-act="sendback">✗ Send it back</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`
+      : `<div class="result ${res.frac ? "good" : "bad"}"><div class="res-h"><b class="t">${res.frac ? "✓ Good call" : "✗ Wrong call"}</b><span class="pts">+${res.pts} pts</span></div><p class="sum">${esc(res.by)} was <b>${j.right ? "right" : "wrong"}</b>, and you ${res.approve ? "approved it" : "sent it back"}. ${j.right ? "" : `The correct answer is <b>${esc(d.options ? d.options[d.correct] : fmtAns(d.answer, d.unit))}</b>.`}</p><div class="howto"><h4>How to get it right</h4><ol>${stepsOf(d.explain).map(x => `<li>${x}</li>`).join("")}</ol></div></div><div class="row-btns" style="margin-top:14px"><button class="btn red" data-act="close">Continue</button></div>`}
+  </article></section>`;
 }
 /* ============================== TEXTURES ==============================
    Every surface texture is painted at load time on a canvas, so the game ships as one file. */
@@ -1837,6 +1973,7 @@ function buildWorld(cfg) {
 const WS_OF = rk => rk === 0 ? "hot" : rk <= 2 ? "desk" : rk <= 5 ? "office" : "corner";
 const COWORKERS = [
   { id: "omar", name: "Omar", role: "Analyst", mesh: "cwA_s", x: 22.6, z: 11.0, rot: Math.PI },
+  { id: "hind", name: "Hind", role: "Executive assistant", mesh: "cwG_s", x: 42.8, z: 12.45, rot: 0, senior: true },
   { id: "lina", name: "Lina", role: "Associate", mesh: "cwB_s", x: 15, z: 11.0, rot: Math.PI, notHQdesk: true },
   { id: "rashid", name: "Rashid", role: "Senior Manager", mesh: "cwE_s", x: 39, z: 3.3, rot: 0, office: "office" },
   { id: "layla", name: "Layla Haddad", role: "Managing Partner", mesh: "boss_s", x: 45, z: 3.25, rot: 0, office: "corner", hqOnly: true },
@@ -1844,13 +1981,13 @@ const COWORKERS = [
   { id: "hamza", name: "Hamza", role: "Café", mesh: "barista", x: 45, z: 23.5, rot: Math.PI, barista: true },
   { id: "dana", name: "Dana", role: "Marketing", mesh: "cwC_s", x: 37.45, z: 18.6, rot: Math.PI / 2 },
   { id: "khalid2", name: "Faisal", role: "IT support", mesh: "cwD_s", x: 46.25, z: 18.8, rot: -Math.PI / 2 },
-  { id: "sami", name: "Sami", role: "Intern", mesh: "cwE", path: [[3.5, 14.5], [46, 14.5]], speed: 1.1 },
+  { id: "sami", name: "Sami", role: "Intern", mesh: "cwE", path: [[3.5, 14.6], [46, 14.6]], speed: 1.1 },
   { id: "noura", name: "Noura", role: "Senior Associate", mesh: "cwC", path: [[13.4, 6.0], [21.8, 6.0]], speed: .9 },
   { id: "ali", name: "Ali", role: "Stock team", mesh: "cwF", path: [[24.5, 18.3], [33.6, 18.3]], speed: .8 },
 ];
 function activeCoworkers(cfg) {
   const hq = cfg.hq, ws = hq ? hq.ws : null;
-  return COWORKERS.filter(c => !(c.hqOnly && !hq) && !(c.clientOnly && hq) && !(c.notHQdesk && hq && (ws === "hot" || ws === "desk")) && !(c.office && hq && c.office === ws));
+  return COWORKERS.filter(c => !(c.senior && !(hq && hq.rank >= 5)) && !(c.hqOnly && !hq) && !(c.clientOnly && hq) && !(c.notHQdesk && hq && (ws === "hot" || ws === "desk")) && !(c.office && hq && c.office === ws));
 }
 let CW = [];
 function buildExtension(cfg, P) {
@@ -1886,6 +2023,8 @@ function buildExtension(cfg, P) {
     box(45, .78, 3.85, .7, .1, .07, "#c9a24a", { flat: true, em: .5 }); box(45, .79, 3.83, .5, .06, .01, hq.color, { flat: true, em: .4 });
     if (hq.rank >= 7) { cyl(44.1, .78, 4.6, .09, .05, "#c9a24a", { seg: 12 }); cyl(44.1, .83, 4.6, .03, .2, "#c9a24a", { seg: 8 }); sph(44.1, 1.1, 4.6, .12, "#f2df63", { em: .4, seg: 12, rings: 8 }); }
   }
+  /* ---- your assistant's desk (Senior Manager and up) ---- */
+  if (hq && hq.rank >= 5) { desk(42.8, 13.05, 1.4, .6); monitor(43.1, .77, 13.2, "-z", "sheet"); box(42.4, .77, 13.0, .22, .06, .16, "#1b1b1f", { flat: true }); box(42.8, .775, 13.3, .5, .07, .05, "#c9a24a", { flat: true, em: .3 }); officeChair(42.8, 12.45, 1); }
   /* ---- café ---- */
   solid(44.8, 0, 22.7, 5.6, 1.0, .7, "#3a2a20", { tex: "wood", tile: .8 }); box(44.8, 1.0, 22.7, 5.8, .05, .85, "#ffffff", { tex: "marble", tile: 1 });
   solid(42.05, 0, 23.2, .1, 1.0, 1.6, "#3a2a20", { tex: "wood", tile: .8 });
@@ -2103,6 +2242,10 @@ const MESH = {
   cwC_s: person({ pants: "#1a1a1e", top: "#3e5c58", robe: "#3e5c58", skin: "#cf9f80", scarf: "#d9c7a0", sit: true }),
   cwD_s: person({ robe: "#f6f6f2", top: "#f6f6f2", skin: "#a8775a", hair: "#1f1a17", ghutra: true, sit: true }),
   cwE_s: person({ pants: "#4a4238", top: "#e6e0d4", skin: "#8a5e44", hair: "#151515", glasses: true, sit: true }),
+  cwG_s: person({ pants: "#1a1a1e", top: "#2f3a4c", robe: "#2f3a4c", skin: "#d9a887", scarf: "#c9a24a", sit: true }),
+  execM_s: person({ robe: "#f6f6f2", top: "#f6f6f2", skin: "#b98463", hair: "#1f1a17", ghutra: true, beard: true, sit: true }),
+  execS_s: person({ pants: "#1c2633", top: "#1c2633", skin: "#c08a64", hair: "#1f1a17", shirt: "#f4f1ea", tie: "#c8372d", beard: true, glasses: true, sit: true }),
+  execF_s: person({ pants: "#1a1a1e", top: "#1a1a1e", robe: "#1a1a1e", skin: "#d4a586", scarf: "#1a1a1e", sit: true }),
   boss_s: person({ pants: "#1a1a1e", top: "#1a1a1e", robe: "#1a1a1e", skin: "#d4a586", scarf: "#5a2a40", sit: true }),
 };
 const NPCS = {
@@ -2225,7 +2368,7 @@ function stationTasks(st) { return ENG ? ENG.list.filter(t => t.st === st) : [];
 function rebuildInter() {
   INTER = [];
   INTER.push({ id: "mariam", ...FIXED.mariam, label: "Mariam · Reception", verb: "Talk to Mariam", fixed: true });
-  for (const c of CW) INTER.push({ id: "cw:" + c.id, cw: c, x: c.x, z: c.z, y: c.mesh.endsWith("_s") ? 1.55 : 2.0, ap: c.barista ? [45, 21.55] : [c.x, c.z], room: roomKey(c.x, c.z), label: `${c.name} · ${c.role}`, place: c.barista ? "the café" : c.office === "corner" ? "the corner office" : ROOMS.find(r => r.key === roomKey(c.x, c.z)).name.toLowerCase().replace(/^/, "the "), verb: c.barista ? (state.coffee === "fetch" ? "Pick up the coffee order" : "Order a coffee") : `Say hi to ${c.name.split(" ")[0]}`, reach: c.barista ? 2.6 : 2.2, cwTag: true });
+  for (const c of CW) if (!(ENG && ENG.office && c.id === "hind")) INTER.push({ id: "cw:" + c.id, cw: c, x: c.x, z: c.z, y: c.mesh.endsWith("_s") ? 1.55 : 2.0, ap: c.barista ? [45, 21.55] : [c.x, c.z], room: roomKey(c.x, c.z), label: `${c.name} · ${c.role}`, place: c.barista ? "the café" : c.office === "corner" ? "the corner office" : ROOMS.find(r => r.key === roomKey(c.x, c.z)).name.toLowerCase().replace(/^/, "the "), verb: c.barista ? (state.coffee === "fetch" ? "Pick up the coffee order" : "Order a coffee") : `Say hi to ${c.name.split(" ")[0]}`, reach: c.barista ? 2.6 : 2.2, cwTag: true });
   if (!ENG) {
     const hc = hqCfg(), ms = MYSPACE[hc.ws], ivw = interviewReady() ? interviewer(curRank() + 1) : null;
     INTER.push({ id: "myspace", ...ms, label: hc.ws === "hot" ? "Hot desk · interns" : `${myName() || "You"} · ${RANKS[hc.rank]}`, verb: openDeal() ? "Check your inbox (1 new)" : hc.ws === "hot" ? "Sit at the hot desk" : `Sit at ${WS_NAME[hc.ws].toLowerCase()}`, fixed: true, mine: true });
@@ -2239,12 +2382,13 @@ function rebuildInter() {
   if (ENG) {
     INTER.push({ id: "notice", ...FIXED.notice, label: "Notice board", verb: "Read the client fact sheet", fixed: true });
     const capPending = ENG.capT && !isDone("cap");
-    INTER.push({ id: "sara", ...FIXED.sara, label: `Sara · ${bossTitle()}`, verb: !ENG.briefed ? "Get your briefing" : allTasksDone() ? (capPending ? "Give your recommendation" : "Hand in your report") : "Check in with Sara", fixed: true });
+    INTER.push({ id: "sara", ...(ENG.office ? HIND_SPOT : FIXED.sara), label: ENG.office ? "Hind · Your assistant" : `Sara · ${bossTitle()}`, verb: !ENG.briefed ? "Get your briefing" : allTasksDone() ? (capPending ? "Give your recommendation" : "Hand in your report") : "Check in with Sara", fixed: true });
     for (const [id, s] of Object.entries(STATIONS)) {
       const ts = stationTasks(id); if (!ts.length) continue;
-      const pend = ts.filter(t => !isDone(t.key)); let label, verb;
+      const pend = ts.filter(t => !isDone(t.key) && !isAway(t.key)); let label, verb;
       if (id === "exec") { label = `${ENG.client.exec} · ${ENG.client.role}`; verb = pend.length ? `Talk to ${firstName(ENG.client.exec)}` : "Review your answers"; }
       else if (id === "ravi") { label = "Ravi · Stockroom"; verb = pend.length ? "Talk to Ravi" : "Review your answers"; }
+      else if (id === "pcdesk") { label = "Your computer"; verb = pend.length ? `Sit down: ${pend[0].T.title}` : "Look at your finished work"; }
       else { label = ts[0].T.title; verb = pend.length ? `Start: ${ts[0].T.title}` : `Review: ${ts[0].T.title}`; }
       INTER.push({ id, ...s, label, verb, station: true, done: !pend.length, title: (pend[0] || ts[0]).T.title });
     }
@@ -2414,6 +2558,7 @@ let last = performance.now(), PV, pathGL = null;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; const t = now / 1000;
   update(dt); if ((ENG && !ENG.done) || hqWalk()) updateGuide(dt); else guide.it = null;
+  if (++frameN % 30 === 0) checkDelegated();
   if (ENG && ["task", "overview", "note", "brief", "report", "promo", "event", "call", "interview", "badges", "board", "till", "sort", "shop", "clients", "inbox"].includes(state.ui)) { requestAnimationFrame(frame); return; }
   const dpr = Math.min(2, devicePixelRatio || 1), w = Math.floor(cv.clientWidth * dpr), h = Math.floor(cv.clientHeight * dpr);
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
@@ -2514,7 +2659,7 @@ function drawGuideHud() {
   const dx = tx - p.x, dz = tz - p.z, fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
   const ang = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
   guideEl.querySelector(".arr").style.transform = `rotate(${ang}rad)`;
-  const what = it.id === "mariam" ? `Return the ${LOST[evOf().spot].thing} to Mariam` : it.id === "cw:hamza" ? "Pick up the coffee order at the café" : !ENG ? (it.verb === "Start your promotion interview" ? `Promotion interview with ${it.label.split(" · ")[0]}` : it.id === "myspace" ? `Visit ${WS_NAME[hqCfg().ws].toLowerCase()}` : "Talk to Sara to start a job") : state.coffee === "carry" && it.id === "sara" ? "Bring the coffees to Sara" : it.id === "sara" ? (!ENG.briefed ? "Get your briefing from Sara" : ENG.capT && !isDone("cap") ? "Give Sara your recommendation" : "Hand your report to Sara") : it.title;
+  const what = ENG && ENG.office && it.id === "sara" ? (!ENG.briefed ? "Get your briefing from Hind" : "Sign off the day with Hind") : it.id === "mariam" ? `Return the ${LOST[evOf().spot].thing} to Mariam` : it.id === "cw:hamza" ? "Pick up the coffee order at the café" : !ENG ? (it.verb === "Start your promotion interview" ? `Promotion interview with ${it.label.split(" · ")[0]}` : it.id === "myspace" ? `Visit ${WS_NAME[hqCfg().ws].toLowerCase()}` : "Talk to Sara to start a job") : state.coffee === "carry" && it.id === "sara" ? "Bring the coffees to Sara" : it.id === "sara" ? (!ENG.briefed ? "Get your briefing from Sara" : ENG.capT && !isDone("cap") ? "Give Sara your recommendation" : "Hand your report to Sara") : it.title;
   const where = nearIt ? (isTouch ? "Tap the yellow button" : "Press E to start") : `${it.place} · ${Math.max(1, Math.round(guide.dist))} m`;
   const key = what + where + nearIt;
   if (key !== guideKey) { guideKey = key; guideEl.classList.toggle("here", nearIt); guideEl.querySelector("b").textContent = what; guideEl.querySelector("span").textContent = where; }
@@ -2535,6 +2680,8 @@ function drawCoach() {
 /* ============================== HUD ============================== */
 const hudEl = document.getElementById("hud"), objEl = document.getElementById("obj"), promptEl = document.getElementById("prompt"), tbtn = document.getElementById("tbtn");
 const esc = escH;
+let frameN = 0;
+const BOSS = () => ENG && ENG.office ? "Hind" : "Sara";
 function xpProgress() { const xp = career().xp, rk = curRank(); if (rk === RANKS.length - 1) return { rk, pct: 100, need: 0 }; return { rk, pct: Math.min(100, Math.max(0, (xp - XP_AT[rk]) / (XP_AT[rk + 1] - XP_AT[rk]) * 100)), need: Math.max(0, XP_AT[rk + 1] - xp) }; }
 function renderHud() {
   const pr = xpProgress(), inEng = ENG && !ENG.done && state.ui !== "hub" && !String(state.ui).startsWith("ob");
@@ -2551,14 +2698,15 @@ function renderHud() {
     objEl.innerHTML = `<h4><span>Haddad &amp; Partners HQ</span><span>${esc(RANKS[hc.rank])}</span></h4><ol>${items.map(i => `<li class="${i.cur ? "cur" : ""} ${i.done ? "done" : ""}"><span>${i.done ? "✓ " : ""}${esc(i.t)}${i.s ? `<small>${esc(i.s)}</small>` : ""}</span></li>`).join("")}</ol>`;
   } else if (showWorldUI) {
     let items;
-    if (!ENG.briefed) items = [{ t: "Get your briefing from Sara", s: "Go to the meeting room", cur: true }];
+    if (!ENG.briefed) items = [{ t: `Get your briefing from ${BOSS()}`, s: ENG.office ? "Her desk outside your office" : "Go to the meeting room", cur: true }];
     else {
       const g = guide.it && guide.it.station ? guide.it.id : null;
       const pend = ENG.list.filter(t => !isDone(t.key)).sort((a, b) => (b.st === g) - (a.st === g)), shown = pend.slice(0, 5);
-      items = shown.map((t, i) => ({ t: t.T.title, s: "Go to " + STATIONS[t.st].place, cur: i === 0 && !allTasksDone() }));
+      const firstHere = shown.findIndex(t => !isAway(t.key));
+      items = shown.map((t, i) => { const r = ENG.res[t.key]; return r && r.status === "delegated" ? { t: t.T.title, s: `${r.by} is working on it…` } : r && r.status === "review" ? { t: `📥 Review ${r.by}'s work`, s: `${t.T.title} · ${isTouch ? "tap Tasks" : "press T"}`, cur: true } : { t: t.T.title, s: "Go to " + STATIONS[t.st].place, cur: i === firstHere && !allTasksDone() }; });
       if (pend.length > shown.length) items.push({ t: `+ ${pend.length - shown.length} more (${isTouch ? "tap Tasks" : "press T"})`, s: "" });
       const eo = eventObjective(); if (eo) items.unshift(eo);
-      if (allTasksDone()) items.push({ t: ENG.capT && !isDone("cap") ? "Give Sara your recommendation" : "Hand your report to Sara", s: "Go to the meeting room", cur: true });
+      if (allTasksDone()) items.push({ t: ENG.office ? "Sign off the day with Hind" : ENG.capT && !isDone("cap") ? "Give Sara your recommendation" : "Hand your report to Sara", s: ENG.office ? "Her desk outside your office" : "Go to the meeting room", cur: true });
     }
     objEl.innerHTML = `<h4><span>${esc(ENG.client.name)}</span><span>${doneCount()}/${ENG.list.length} done</span></h4><ol>${items.map(i => `<li class="${i.cur ? "cur" : ""}"><span>${esc(i.t)}${i.s ? `<small>${esc(i.s)}</small>` : ""}</span></li>`).join("")}</ol>`;
   }
@@ -2573,14 +2721,20 @@ function toast(msg) { const t = document.createElement("div"); t.className = "to
 /* ============================== FLOW ============================== */
 const MESH_FOR = { m: "execM", s: "execS", f: "execF" };
 function startEngagement(eng) {
-  planEvent(eng); materialize(eng); ENG.ev = eng.ev; ENG.bonus = eng.bonus || []; uploadWorld({ palette: eng.palette, bay: eng.bay, stripe: eng.client.stripe, seed: eng.seed, logo: eng.client.name }); hqKey = ""; state.coffee = ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null;
+  planEvent(eng); useStations(eng.office ? officeStations(WS_OF(curRank())) : BASE_STATIONS);
+  materialize(eng); ENG.ev = eng.ev; ENG.bonus = eng.bonus || [];
+  NPCS.exec.mesh = (MESH_FOR[eng.client.g] || "execS") + (eng.office ? "_s" : "");
+  if (eng.office) { const v = STATIONS.exec; Object.assign(NPCS.exec, { x: v.x, z: v.z, rot: Math.PI, base: Math.PI }); uploadWorld({ palette: 0, bay: 18, stripe: "#c8372d", seed: 1, hq: hqCfg() }); }
+  else { Object.assign(NPCS.exec, { x: 30, z: 2.1, rot: 0, base: 0 }); uploadWorld({ palette: eng.palette, bay: eng.bay, stripe: eng.client.stripe, seed: eng.seed, logo: eng.client.name }); }
+  hqKey = ""; state.coffee = ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null;
   if (ENG.ev && ["offered", "call"].includes(ENG.ev.status)) ENG.ev.status = "waiting";
-  NPCS.exec.mesh = MESH_FOR[eng.client.g] || "execS";
-  Object.assign(state.player, SPAWN); moved = 0; rebuildInter();
+  Object.assign(state.player, eng.office ? (STATIONS.pcdesk.room === "corner" ? { x: 45, z: 9.2, yaw: 0, pitch: 0 } : { x: 39, z: 9.0, yaw: 0, pitch: 0 }) : SPAWN); moved = 0; rebuildInter();
   state.ui = null; renderUI(); updatePrompt();
-  toast(ENG.briefed ? `Back at ${ENG.client.name}.` : `Welcome to ${ENG.client.name}. Sara is waiting in the meeting room.`);
+  toast(ENG.office ? (ENG.briefed ? "Back in your office." : `Today's client: ${ENG.client.name}. Hind has your briefing.`) : ENG.briefed ? `Back at ${ENG.client.name}.` : `Welcome to ${ENG.client.name}. Sara is waiting in the meeting room.`);
+  if (ENG.office) for (const t of ENG.list) if (t.auto && !ENG.res[t.key]) delegate(t.key, t.auto);
+  checkDelegated();
 }
-function leaveToHub() { storeEng(); ENG = null; state.coffee = null; ensureHQWorld(true); Object.assign(state.player, SPAWN); state.ui = "hub"; state.confirm = null; renderUI(); updatePrompt(); }
+function leaveToHub() { storeEng(); ENG = null; useStations(BASE_STATIONS); Object.assign(NPCS.exec, { x: 30, z: 2.1, rot: 0, base: 0 }); state.coffee = null; ensureHQWorld(true); Object.assign(state.player, SPAWN); state.ui = "hub"; state.confirm = null; renderUI(); updatePrompt(); }
 function interact() {
   if (paused() || !near) return;
   const it = near;
@@ -2608,7 +2762,7 @@ function interact() {
     if (ENG.capT && !isDone("cap")) return openTask("cap");
     return finishEngagement();
   }
-  const ts = stationTasks(it.id), pend = ts.find(t => !isDone(t.key)), tk = pend || ts[ts.length - 1];
+  const ts = stationTasks(it.id), pend = ts.find(t => !isDone(t.key) && !isAway(t.key)), tk = pend || ts.filter(t => !isAway(t.key)).pop() || ts[ts.length - 1];
   if (save.coach === 2) { save.coach = 3; persist(); }
   if (isPC(tk)) return startZoomIn(it.id, tk.key);
   Audio.play(it.id === "exec" ? "knock" : "paper");
@@ -2689,12 +2843,12 @@ const LOST = [
   { thing: "sunglasses", x: 33.6, z: 10.2, y: .45, hint: "on the coffee table in the Executive suite" },
   { thing: "notebook", x: 7.1, z: 21.9, y: .42, hint: "on the round table in the Lobby" },
 ];
-const EV_BONUS = { call: 50, lost: 40, coffee: 30 };
+const EV_BONUS = { call: 50, lost: 40, coffee: 30, crisis: 80 };
 function planEvent(eng) {
   if (eng.ev !== undefined) return;
   const r = mul32(eng.seed + 4242), h = H(r);
   if (eng.tasks.length < 4 || r() < .2) { eng.ev = null; return; }
-  const type = h.pick(["call", "lost", "coffee"]);
+  const sen = curRank() >= 5, type = eng.office ? h.pick(["call", "crisis", "crisis"]) : sen ? h.pick(["call", "crisis", "lost", "coffee"]) : h.pick(["call", "lost", "coffee"]);
   eng.ev = { type, at: 1 + Math.floor(r() * Math.min(3, eng.tasks.length - 2)), status: "waiting", spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 };
 }
 const evOf = () => ENG && ENG.ev;
@@ -2703,19 +2857,20 @@ function syncEv() { const e = save.cur[save.mode]; if (e && ENG) { e.ev = ENG.ev
 function maybeFireEvent() {
   const ev = evOf(); if (!ev || ev.status !== "waiting" || !ENG.briefed || doneCount() < ev.at || allTasksDone()) return false;
   ev.status = "offered"; syncEv();
-  if (ev.type === "call") { Audio.play("ring"); setTimeout(() => Audio.play("ring"), 1300); }
+  if (ev.type === "call" || ev.type === "crisis") { Audio.play("ring"); setTimeout(() => Audio.play("ring"), 1300); }
   else Audio.play("blip");
   openUI("event"); return true;
 }
 function eventCard() {
   const ev = evOf(), c = ENG.client, lost = LOST[ev.spot];
+  if (ev.type === "crisis") return { who: "Hind", role: "Your assistant", av: "H", col: "#2f3a4c", h: "🚨 We have a problem!", body: `"${hi("Sorry to interrupt")}, something urgent has come up and it needs your decision right now. You'll have 30 seconds."`, yes: "Deal with it", no: "Ignore it", bonus: EV_BONUS.crisis };
   if (ev.type === "call") return { who: c.exec, role: c.role, av: c.exec[0], col: "#1c2633", h: "📞 Urgent call!", body: `"${hi("Hello")}! It's ${esc(firstName(c.exec))}. I've got a quick question and I need an answer in the next 30 seconds."`, yes: "Answer the phone", no: "Let it ring", bonus: EV_BONUS.call };
   if (ev.type === "lost") return { who: "Mariam", role: "Reception", av: "M", col: "#5a4a30", h: `A visitor lost their ${lost.thing}`, body: `"${hi("Excuse me")}! A visitor left their <b>${lost.thing}</b> somewhere. They think it's ${lost.hint}. Could you find it and bring it to me at reception?"`, yes: "I'll look for it", no: "Not now", bonus: EV_BONUS.lost };
   return { who: "Sara", role: bossTitle(), av: "S", col: "#2f3a4c", h: "Coffee run?", body: `"I'm buried in work${myName() ? ", " + esc(myName()) : ""}. Could you pick up the team's coffee order from the café at the east end and bring it to me in the meeting room?"`, yes: "Sure!", no: "Not now", bonus: EV_BONUS.coffee };
 }
 function acceptEvent() {
   const ev = evOf(); if (!ev) return;
-  if (ev.type === "call") { ev.status = "call"; syncEv(); state.call = makeCall(); Audio.play("click"); openUI("call"); startCallTimer(); return; }
+  if (ev.type === "call" || ev.type === "crisis") { ev.status = "call"; syncEv(); state.call = ev.type === "crisis" ? makeCrisis() : makeCall(); Audio.play("click"); openUI("call"); startCallTimer(); return; }
   ev.status = ev.type === "lost" ? "search" : "fetch"; syncEv(); Audio.play("stamp"); closeUI(); guideT = 0;
   toast(ev.type === "lost" ? `Find the ${LOST[ev.spot].thing}: ${LOST[ev.spot].hint}.` : "Head to the café at the east end of the corridor.");
 }
@@ -2744,7 +2899,7 @@ function startCallTimer() {
 function finishCall(choice) {
   const c = state.call, ev = evOf(); if (!c || c.picked !== null) return;
   clearInterval(callTimer); c.picked = choice; const ok = choice === c.correct;
-  ev.status = ok ? "won" : "lost"; if (ok) bonusAdd("Urgent call", EV_BONUS.call); syncEv();
+  ev.status = ok ? "won" : "lost"; if (ok) bonusAdd(c.crisis ? "Handled a crisis" : "Urgent call", c.crisis ? EV_BONUS.crisis : EV_BONUS.call); syncEv();
   Audio.play(ok ? "good" : "bad"); renderUI();
 }
 
@@ -2966,14 +3121,15 @@ function toggleCalc(force) { calc.open = force ?? !calc.open; if (calc.open && d
 /* ============================== THE COMPUTER ==============================
    Desk tasks open on a computer: the camera sits down and zooms into the monitor, the screen powers on,
    and the task runs inside an app (spreadsheet with working formulas, email, or a PDF with a red pen). */
-const PC_STATIONS = new Set(["laptop", "mon1", "mon2", "dpc"]);
+const PC_STATIONS = new Set(["laptop", "mon1", "mon2", "dpc", "pcdesk"]);
 const SCREEN_AT = { laptop: [6, .93, 5.76], mon1: [15.34, 1.13, 7.37], mon2: [20.84, 1.13, 7.37], dpc: [34.2, 1.16, 20.62] };
+const screenAt = st => st === "pcdesk" ? (STATIONS.pcdesk && STATIONS.pcdesk.room === "corner" ? [45.3, 1.145, 4.533, -1] : [39.35, 1.135, 4.333, -1]) : SCREEN_AT[st];
 const isPC = tk => !!tk && tk.key !== "cap" && PC_STATIONS.has(tk.st) && ["calc", "mcq", "flag", "classify"].includes(tk.T.kind);
-const appOf = tk => tk.T.kind === "mcq" ? "email" : tk.T.kind === "flag" ? "pdf" : "sheet";
+const appOf = tk => tk.video ? "video" : tk.T.kind === "mcq" ? "email" : tk.T.kind === "flag" ? "pdf" : "sheet";
 
 /* ---------- camera: sit down and zoom into the screen ---------- */
 const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-function screenPose(st) { const [x, y, z] = SCREEN_AT[st]; return { x, y: y + .03, z: z + .5, yaw: 0, pitch: -.05 }; }
+function screenPose(st) { const [x, y, z, d = 1] = screenAt(st); return { x, y: y + .03, z: z + .5 * d, yaw: d > 0 ? 0 : Math.PI, pitch: -.05 }; }
 function playerPose() { const p = state.player; return { x: p.x, y: 1.65, z: p.z, yaw: p.yaw, pitch: p.pitch }; }
 function startZoomIn(st, key) {
   if (state.cam) return;
@@ -2982,7 +3138,7 @@ function startZoomIn(st, key) {
   for (const k in keys) keys[k] = false; joy = null; stick.hidden = true; updatePrompt();
 }
 function startZoomOut() {
-  const st = state.pcFrom; state.pcFrom = null; if (!st || !SCREEN_AT[st]) { document.body.classList.remove("zooming"); return; }
+  const st = state.pcFrom; state.pcFrom = null; if (!st || !screenAt(st)) { document.body.classList.remove("zooming"); return; }
   state.cam = { from: screenPose(st), to: playerPose(), t0: performance.now(), dur: 800, then: () => { state.cam = null; document.body.classList.remove("zooming"); updatePrompt(); } };
 }
 function camNow(now) {
@@ -3057,7 +3213,7 @@ function pcFrame(tk, inner, title, icon) {
   const pw = state.pcPower; state.pcPower = false;
   const rk = curRank(), dual = rk >= 3 && rk < 6, wide = rk >= 6, c = ENG ? ENG.client : { name: "Haddad & Partners" };
   const now = new Date(), clock = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const nxt = ENG ? ENG.list.find(t => t.key !== tk.key && !isDone(t.key)) : null, res = resOf(tk.key), done = res.status === "done", ok = done && res.frac >= .99;
+  const nxt = ENG ? ENG.list.find(t => t.key !== tk.key && !isDone(t.key) && !isAway(t.key)) : null, res = resOf(tk.key), done = res.status === "done", ok = done && res.frac >= .99;
   return `<div class="pc ${wide ? "wide" : ""} ${dual ? "dual" : ""}">
     <div class="pc-desk"><span class="mug">☕</span><span class="sticky">${esc(myName() || "Me")}: call Sara 3pm</span></div>
     <div class="pc-row">
@@ -3124,7 +3280,14 @@ function pdfView(tk) {
     ${!done ? `<p class="instr">Tap a row to circle it with the red pen. Tap again to rub it out.</p>${state.hintOpen || res.hint ? `<div class="tipbox"><b>Hint</b><span>${esc(d.hint)}</span></div>` : ""}<div class="sheetbtns"><button class="btn red" data-act="submit">Submit ${state.picks.size} circle${state.picks.size === 1 ? "" : "s"}</button>${!(state.hintOpen || res.hint) ? `<button class="btn plain" data-act="hint">${isStudent() ? "Hint (−25%)" : "Hint"}</button>` : ""}</div>`
       : `${resultHTML(tk, d, res, "flag")}<div class="sheetbtns">${tk.key === "practice" ? `<button class="btn red" data-act="practice" data-id="practice">Another one</button><button class="btn plain" data-act="endpractice">Done</button>` : `<button class="btn red" data-act="close">Close and stand up</button><button class="btn plain" data-act="practice" data-id="${tk.key}">Practice a similar one</button>`}</div>`}</div>`, "PDF Viewer", "📄");
 }
-function pcView(tk) { const a = appOf(tk); return a === "email" ? emailView(tk) : a === "pdf" ? pdfView(tk) : sheetView(tk); }
+function videoView(tk) {
+  const d = tk.d, res = resOf(tk.key), done = res.status === "done", c = ENG.client;
+  return pcFrame(tk, `<div class="vc"><div class="vc-feed"><div class="vc-live">🔴 LIVE · ${esc(c.name)}</div><div class="vc-face"><div class="av">${esc(c.exec[0])}</div><b>${esc(c.exec)}</b><small>${esc(c.role)}</small></div><div class="vc-me">${avatarHTML(44)}<span>You</span></div><div class="vc-bar"><span>🎤</span><span>📷</span><span class="end">📞</span></div></div>
+    <div class="vc-chat"><p class="brief">"${d.brief}"</p>${d.facts ? `<div class="facts">${d.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}${d.table ? tableHTML(d.table, false, false, new Set(), null) : ""}<p class="q">${esc(d.q)}</p>${!done && (state.hintOpen || res.hint) ? `<div class="tipbox"><b>Hint</b><span>${esc(d.hint)}</span></div>` : ""}
+    ${!done ? `<div class="choices">${d.options.map((o, i) => { const x = (res.wrongOpts || []).includes(i); return `<button class="choice reply ${x ? "crossed" : state.sel === i ? "sel" : ""}" ${x ? "disabled" : `data-act="opt" data-id="${i}"`}><b>💬 ${esc(o)}</b></button>`; }).join("")}</div><div class="sheetbtns"><button class="btn red" data-act="submit" ${state.sel === null ? "disabled" : ""}>Say it</button>${!(state.hintOpen || res.hint) ? `<button class="btn plain" data-act="hint">${isStudent() ? "Hint (−25%)" : "Hint"}</button>` : ""}${state.msg ? `<span class="err">${esc(state.msg)}</span>` : ""}</div>`
+      : `${resultHTML(tk, d, res, "mcq")}<div class="sheetbtns"><button class="btn red" data-act="close">End call</button>${tk.key !== "practice" ? `<button class="btn plain" data-act="practice" data-id="${tk.key}">Practice a similar one</button>` : ""}</div>`}</div></div>`, `Video call – ${c.exec}`, "🎥");
+}
+function pcView(tk) { const a = appOf(tk); return a === "video" ? videoView(tk) : a === "email" ? emailView(tk) : a === "pdf" ? pdfView(tk) : sheetView(tk); }
 function pcOpened(tk) {
   state.scratch = {}; state.cell = null; state.ping = null; state.ansDraft = ""; state.pcPower = true; clearTimeout(state.pingT);
   if (!isPC(tk) || resOf(tk.key).status === "done" || Math.random() > .45) return;
@@ -3152,9 +3315,14 @@ const JOB = () => isStudent() ? "engagement" : "job";
 const KIND_IC = { calc: "123", mcq: "?", flag: "✗", classify: "≡", count: "#" };
 const stars = pct => pct >= 85 ? "★★★" : pct >= 65 ? "★★☆" : pct >= 40 ? "★☆☆" : "☆☆☆";
 const kindName = t => t.d && t.d.asChoice ? "Pick the answer" : KIND_NAME[t.T.kind];
+const JUNIORS = ["Omar", "Lina", "Noura", "Sami"];
+function freeJunior() { const busy = new Set(Object.values(ENG.res).filter(r => r.status === "delegated" || r.status === "review").map(r => r.by)); return JUNIORS.find(j => !busy.has(j)); }
 function taskRow(t) {
   const r = ENG.res[t.key], done = r && r.status === "done";
-  return `<div class="tl ${done ? "done" : ""} ${t.key === "cap" ? "cap" : ""}"><span class="ic">${done ? "✓" : KIND_IC[t.T.kind]}</span><div><b>${esc(t.T.title)}</b><small>${esc(t.T.major)} · ${kindName(t)} · ${esc(t.key === "cap" ? "Sara, meeting room" : STATIONS[t.st].place)}</small></div><span class="st">${done ? `${r.pts}/${r.max}` : `${ptsFor(t.tier)} pts`}</span></div>`;
+  if (r && r.status === "delegated") return `<div class="tl away"><span class="ic">⏳</span><div><b>${esc(t.T.title)}</b><small>${esc(r.by)} is working on it · back in about ${Math.max(5, Math.ceil((r.readyAt - Date.now()) / 1000))} s</small></div><span class="st">delegated</span></div>`;
+  if (r && r.status === "review") return `<div class="tl rev"><span class="ic">📥</span><div><b>Review: ${esc(t.T.title)}</b><small>${esc(r.by)} has finished. Check it before it goes to the client.</small></div><button class="btn red sm" data-act="review" data-id="${t.key}">Review</button></div>`;
+  const canSend = state.ui === "overview" && ENG.briefed && canDelegate() && !done && delegable(t) && delegUsed() < delegLimit() && freeJunior();
+  return `<div class="tl ${done ? "done" : ""} ${t.key === "cap" ? "cap" : ""}"><span class="ic">${done ? "✓" : KIND_IC[t.T.kind]}</span><div><b>${esc(t.T.title)}</b><small>${esc(t.T.major)} · ${kindName(t)} · ${esc(t.key === "cap" ? "Sara, meeting room" : STATIONS[t.st].place)}</small></div>${canSend ? `<button class="btn plain sm" data-act="delegate" data-id="${t.key}" title="Send a junior to do it">Send ${freeJunior()}</button>` : `<span class="st">${done ? `${r.pts}/${r.max}${r.reviewed ? " · reviewed" : ""}` : `${ptsFor(t.tier)} pts`}</span>`}</div>`;
 }
 function tableHTML(tb, flaggable, done, wrong, given) {
   const g = new Set(given || []);
@@ -3276,13 +3444,14 @@ const views = {
       </div></div>`;
   },
   brief: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">${esc(ENG.client.name)}</div><div class="label">${ENG.daily ? "Daily challenge · " : ""}${esc(ENG.service)}</div></div>
-    <div class="npc-line"><div class="av" style="background:#2f3a4c">S</div><div>
+    <div class="npc-line"><div class="av" style="background:#2f3a4c">${ENG.office ? "H" : "S"}</div><div>
     <h2>Today's ${JOB()}</h2>
+    ${ENG.office ? `<p>"${hi("Good morning")}! Today's client is ${esc(ENG.client.name)}. You don't need to go anywhere: files come to <b>your computer</b>, visitors and candidates will come to <b>your office</b>, and calls come through as <b>video calls</b>. ${ENG.list.some(t => t.auto) ? "Ravi is already counting the stock for you. " : ""}Anything with legwork, send to your team from the task list, then review what they hand back. Come and see me when the day's done."</p>` : curRank() === 4 ? `<p class="clientline">👥 <b>You're a Manager now.</b> Open the task list (${isTouch ? "tap Tasks" : "press T"}) and press <b>Send</b> to hand up to 2 tasks to your team. They'll bring the work back for you to review, so you walk less.</p>` : ""}
     ${isStudent() ? `<p>"${hi("Welcome")}! ${esc(ENG.client.name)} works in ${esc(ENG.client.ind)}. ${esc(ENG.client.exec)}, their ${esc(ENG.client.role)}, is in the Executive suite. Here's your list. Do them in any order; the <b>yellow arrow</b> will lead you to the nearest one. ${ENG.capT ? "When you're done, come back and give me your recommendation." : "Come back to me when you're done."}"</p>` : `<p>"${hi()}! Today we're helping ${esc(ENG.client.name)}. Here are your ${ENG.list.length} tasks. Just follow the <b>yellow arrow</b>, then come back to me."</p>`}</div></div>
     ${clientBriefLine()}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
     <p class="label" style="color:var(--ink-dim)">${isTouch ? "Tap Tasks" : "Press T"} any time to see this list again.</p>
-    <span class="sig">Sara</span><div style="margin-top:14px"><button class="btn red" data-act="briefed">Get to work</button></div></article>`,
+    <span class="sig">${ENG.office ? "Hind" : "Sara"}</span><div style="margin-top:14px"><button class="btn red" data-act="briefed">Get to work</button></div></article>`,
   overview: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Task list</div><div class="label">${esc(ENG.client.name)} · ${doneCount()}/${ENG.list.length} done</div></div>
     ${ENG.briefed && !allTasksDone() && near && near.id === "sara" ? `<p>"You still have ${ENG.list.length - doneCount()} to go. Follow the arrow and come back when they're done."</p>` : ""}
     <div class="tasklist">${ENG.list.map(taskRow).join("")}${ENG.capT ? taskRow(ENG.capT) : ""}</div>
@@ -3295,6 +3464,7 @@ const views = {
   },
   task: () => {
     const tk = taskByKey(state.task), d = tk.d, kind = tk.T.kind, res = resOf(tk.key), done = res.status === "done", prac = tk.key === "practice", choice = kind === "mcq" || d.asChoice;
+    if (res.status === "review" || res.reviewed) return reviewView(tk);
     if (isPC(tk)) return pcView(tk);
     const who = tk.key === "cap" ? "Sara" : tk.st === "exec" ? ENG.client.exec : tk.st === "ravi" ? "Ravi" : null;
     let input = "";
@@ -3372,7 +3542,7 @@ const views = {
   call: () => {
     const c = state.call, ans = c.picked !== null, ok = c.picked === c.correct, cl = ENG.client;
     return `<section class="fadein"><article class="paper callcard">
-      <div class="letterhead"><div class="co">📞 ${esc(cl.exec)} on the line</div><div class="label">${ans ? (ok ? `+${EV_BONUS.call} bonus` : "No bonus") : `<span id="calltime" class="calltime">${Math.max(0, Math.ceil((c.end - performance.now()) / 1000))}s</span>`}</div></div>
+      <div class="letterhead"><div class="co">${c.crisis ? "🚨 Crisis on your desk" : `📞 ${esc(cl.exec)} on the line`}</div><div class="label">${ans ? (ok ? `+${EV_BONUS.call} bonus` : "No bonus") : `<span id="calltime" class="calltime">${Math.max(0, Math.ceil((c.end - performance.now()) / 1000))}s</span>`}</div></div>
       <p class="brief">${c.brief}</p>
       ${c.facts ? `<div class="facts">${c.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}
       ${c.table ? tableHTML(c.table, false, false, new Set(), null) : ""}
@@ -3513,6 +3683,10 @@ document.addEventListener("click", e => {
     case "opt": state.sel = +id; Audio.play("click"); renderUI(); break;
     case "flagrow": { const i = +id; state.picks.has(i) ? (state.picks.delete(i), Audio.play("unstamp")) : (state.picks.add(i), Audio.play("stamp")); renderUI(); break; }
     case "submit": case "submitpc": submitTask(); break;
+    case "delegate": { const j = freeJunior(); if (j) { delegate(id, j); Audio.play("stamp"); toast(`📤 ${j} is on “${taskByKey(id).T.title}”.`); renderUI(); } break; }
+    case "review": Audio.play("paper"); openTask(id); break;
+    case "approve": submitReview(true); break;
+    case "sendback": submitReview(false); break;
     case "cell": { state.cell = id; Audio.play("click"); ov.querySelectorAll(".grid .sel").forEach(x => x.classList.remove("sel")); t.classList.add("sel"); const nm = ov.querySelector(".fxbar .nm"), fv = ov.querySelector(".fv"); if (nm) nm.textContent = id; if (fv) fv.textContent = t.textContent; break; }
     case "calc": toggleCalc(); renderUI(); break;
     case "hint": { const res = resOf(taskByKey(state.task).key); if (!res.hint && state.task !== "practice") { res.hint = true; storeEng(); } state.hintOpen = true; Audio.play("paper"); renderUI(); break; }

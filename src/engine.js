@@ -307,6 +307,7 @@ function buildWorld(cfg) {
 const WS_OF = rk => rk === 0 ? "hot" : rk <= 2 ? "desk" : rk <= 5 ? "office" : "corner";
 const COWORKERS = [
   { id: "omar", name: "Omar", role: "Analyst", mesh: "cwA_s", x: 22.6, z: 11.0, rot: Math.PI },
+  { id: "hind", name: "Hind", role: "Executive assistant", mesh: "cwG_s", x: 42.8, z: 12.45, rot: 0, senior: true },
   { id: "lina", name: "Lina", role: "Associate", mesh: "cwB_s", x: 15, z: 11.0, rot: Math.PI, notHQdesk: true },
   { id: "rashid", name: "Rashid", role: "Senior Manager", mesh: "cwE_s", x: 39, z: 3.3, rot: 0, office: "office" },
   { id: "layla", name: "Layla Haddad", role: "Managing Partner", mesh: "boss_s", x: 45, z: 3.25, rot: 0, office: "corner", hqOnly: true },
@@ -314,13 +315,13 @@ const COWORKERS = [
   { id: "hamza", name: "Hamza", role: "Café", mesh: "barista", x: 45, z: 23.5, rot: Math.PI, barista: true },
   { id: "dana", name: "Dana", role: "Marketing", mesh: "cwC_s", x: 37.45, z: 18.6, rot: Math.PI / 2 },
   { id: "khalid2", name: "Faisal", role: "IT support", mesh: "cwD_s", x: 46.25, z: 18.8, rot: -Math.PI / 2 },
-  { id: "sami", name: "Sami", role: "Intern", mesh: "cwE", path: [[3.5, 14.5], [46, 14.5]], speed: 1.1 },
+  { id: "sami", name: "Sami", role: "Intern", mesh: "cwE", path: [[3.5, 14.6], [46, 14.6]], speed: 1.1 },
   { id: "noura", name: "Noura", role: "Senior Associate", mesh: "cwC", path: [[13.4, 6.0], [21.8, 6.0]], speed: .9 },
   { id: "ali", name: "Ali", role: "Stock team", mesh: "cwF", path: [[24.5, 18.3], [33.6, 18.3]], speed: .8 },
 ];
 function activeCoworkers(cfg) {
   const hq = cfg.hq, ws = hq ? hq.ws : null;
-  return COWORKERS.filter(c => !(c.hqOnly && !hq) && !(c.clientOnly && hq) && !(c.notHQdesk && hq && (ws === "hot" || ws === "desk")) && !(c.office && hq && c.office === ws));
+  return COWORKERS.filter(c => !(c.senior && !(hq && hq.rank >= 5)) && !(c.hqOnly && !hq) && !(c.clientOnly && hq) && !(c.notHQdesk && hq && (ws === "hot" || ws === "desk")) && !(c.office && hq && c.office === ws));
 }
 let CW = [];
 function buildExtension(cfg, P) {
@@ -356,6 +357,8 @@ function buildExtension(cfg, P) {
     box(45, .78, 3.85, .7, .1, .07, "#c9a24a", { flat: true, em: .5 }); box(45, .79, 3.83, .5, .06, .01, hq.color, { flat: true, em: .4 });
     if (hq.rank >= 7) { cyl(44.1, .78, 4.6, .09, .05, "#c9a24a", { seg: 12 }); cyl(44.1, .83, 4.6, .03, .2, "#c9a24a", { seg: 8 }); sph(44.1, 1.1, 4.6, .12, "#f2df63", { em: .4, seg: 12, rings: 8 }); }
   }
+  /* ---- your assistant's desk (Senior Manager and up) ---- */
+  if (hq && hq.rank >= 5) { desk(42.8, 13.05, 1.4, .6); monitor(43.1, .77, 13.2, "-z", "sheet"); box(42.4, .77, 13.0, .22, .06, .16, "#1b1b1f", { flat: true }); box(42.8, .775, 13.3, .5, .07, .05, "#c9a24a", { flat: true, em: .3 }); officeChair(42.8, 12.45, 1); }
   /* ---- café ---- */
   solid(44.8, 0, 22.7, 5.6, 1.0, .7, "#3a2a20", { tex: "wood", tile: .8 }); box(44.8, 1.0, 22.7, 5.8, .05, .85, "#ffffff", { tex: "marble", tile: 1 });
   solid(42.05, 0, 23.2, .1, 1.0, 1.6, "#3a2a20", { tex: "wood", tile: .8 });
@@ -573,6 +576,10 @@ const MESH = {
   cwC_s: person({ pants: "#1a1a1e", top: "#3e5c58", robe: "#3e5c58", skin: "#cf9f80", scarf: "#d9c7a0", sit: true }),
   cwD_s: person({ robe: "#f6f6f2", top: "#f6f6f2", skin: "#a8775a", hair: "#1f1a17", ghutra: true, sit: true }),
   cwE_s: person({ pants: "#4a4238", top: "#e6e0d4", skin: "#8a5e44", hair: "#151515", glasses: true, sit: true }),
+  cwG_s: person({ pants: "#1a1a1e", top: "#2f3a4c", robe: "#2f3a4c", skin: "#d9a887", scarf: "#c9a24a", sit: true }),
+  execM_s: person({ robe: "#f6f6f2", top: "#f6f6f2", skin: "#b98463", hair: "#1f1a17", ghutra: true, beard: true, sit: true }),
+  execS_s: person({ pants: "#1c2633", top: "#1c2633", skin: "#c08a64", hair: "#1f1a17", shirt: "#f4f1ea", tie: "#c8372d", beard: true, glasses: true, sit: true }),
+  execF_s: person({ pants: "#1a1a1e", top: "#1a1a1e", robe: "#1a1a1e", skin: "#d4a586", scarf: "#1a1a1e", sit: true }),
   boss_s: person({ pants: "#1a1a1e", top: "#1a1a1e", robe: "#1a1a1e", skin: "#d4a586", scarf: "#5a2a40", sit: true }),
 };
 const NPCS = {

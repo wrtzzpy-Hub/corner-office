@@ -1,14 +1,15 @@
 /* ============================== THE COMPUTER ==============================
    Desk tasks open on a computer: the camera sits down and zooms into the monitor, the screen powers on,
    and the task runs inside an app (spreadsheet with working formulas, email, or a PDF with a red pen). */
-const PC_STATIONS = new Set(["laptop", "mon1", "mon2", "dpc"]);
+const PC_STATIONS = new Set(["laptop", "mon1", "mon2", "dpc", "pcdesk"]);
 const SCREEN_AT = { laptop: [6, .93, 5.76], mon1: [15.34, 1.13, 7.37], mon2: [20.84, 1.13, 7.37], dpc: [34.2, 1.16, 20.62] };
+const screenAt = st => st === "pcdesk" ? (STATIONS.pcdesk && STATIONS.pcdesk.room === "corner" ? [45.3, 1.145, 4.533, -1] : [39.35, 1.135, 4.333, -1]) : SCREEN_AT[st];
 const isPC = tk => !!tk && tk.key !== "cap" && PC_STATIONS.has(tk.st) && ["calc", "mcq", "flag", "classify"].includes(tk.T.kind);
-const appOf = tk => tk.T.kind === "mcq" ? "email" : tk.T.kind === "flag" ? "pdf" : "sheet";
+const appOf = tk => tk.video ? "video" : tk.T.kind === "mcq" ? "email" : tk.T.kind === "flag" ? "pdf" : "sheet";
 
 /* ---------- camera: sit down and zoom into the screen ---------- */
 const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-function screenPose(st) { const [x, y, z] = SCREEN_AT[st]; return { x, y: y + .03, z: z + .5, yaw: 0, pitch: -.05 }; }
+function screenPose(st) { const [x, y, z, d = 1] = screenAt(st); return { x, y: y + .03, z: z + .5 * d, yaw: d > 0 ? 0 : Math.PI, pitch: -.05 }; }
 function playerPose() { const p = state.player; return { x: p.x, y: 1.65, z: p.z, yaw: p.yaw, pitch: p.pitch }; }
 function startZoomIn(st, key) {
   if (state.cam) return;
@@ -17,7 +18,7 @@ function startZoomIn(st, key) {
   for (const k in keys) keys[k] = false; joy = null; stick.hidden = true; updatePrompt();
 }
 function startZoomOut() {
-  const st = state.pcFrom; state.pcFrom = null; if (!st || !SCREEN_AT[st]) { document.body.classList.remove("zooming"); return; }
+  const st = state.pcFrom; state.pcFrom = null; if (!st || !screenAt(st)) { document.body.classList.remove("zooming"); return; }
   state.cam = { from: screenPose(st), to: playerPose(), t0: performance.now(), dur: 800, then: () => { state.cam = null; document.body.classList.remove("zooming"); updatePrompt(); } };
 }
 function camNow(now) {
@@ -92,7 +93,7 @@ function pcFrame(tk, inner, title, icon) {
   const pw = state.pcPower; state.pcPower = false;
   const rk = curRank(), dual = rk >= 3 && rk < 6, wide = rk >= 6, c = ENG ? ENG.client : { name: "Haddad & Partners" };
   const now = new Date(), clock = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const nxt = ENG ? ENG.list.find(t => t.key !== tk.key && !isDone(t.key)) : null, res = resOf(tk.key), done = res.status === "done", ok = done && res.frac >= .99;
+  const nxt = ENG ? ENG.list.find(t => t.key !== tk.key && !isDone(t.key) && !isAway(t.key)) : null, res = resOf(tk.key), done = res.status === "done", ok = done && res.frac >= .99;
   return `<div class="pc ${wide ? "wide" : ""} ${dual ? "dual" : ""}">
     <div class="pc-desk"><span class="mug">☕</span><span class="sticky">${esc(myName() || "Me")}: call Sara 3pm</span></div>
     <div class="pc-row">
@@ -159,7 +160,14 @@ function pdfView(tk) {
     ${!done ? `<p class="instr">Tap a row to circle it with the red pen. Tap again to rub it out.</p>${state.hintOpen || res.hint ? `<div class="tipbox"><b>Hint</b><span>${esc(d.hint)}</span></div>` : ""}<div class="sheetbtns"><button class="btn red" data-act="submit">Submit ${state.picks.size} circle${state.picks.size === 1 ? "" : "s"}</button>${!(state.hintOpen || res.hint) ? `<button class="btn plain" data-act="hint">${isStudent() ? "Hint (−25%)" : "Hint"}</button>` : ""}</div>`
       : `${resultHTML(tk, d, res, "flag")}<div class="sheetbtns">${tk.key === "practice" ? `<button class="btn red" data-act="practice" data-id="practice">Another one</button><button class="btn plain" data-act="endpractice">Done</button>` : `<button class="btn red" data-act="close">Close and stand up</button><button class="btn plain" data-act="practice" data-id="${tk.key}">Practice a similar one</button>`}</div>`}</div>`, "PDF Viewer", "📄");
 }
-function pcView(tk) { const a = appOf(tk); return a === "email" ? emailView(tk) : a === "pdf" ? pdfView(tk) : sheetView(tk); }
+function videoView(tk) {
+  const d = tk.d, res = resOf(tk.key), done = res.status === "done", c = ENG.client;
+  return pcFrame(tk, `<div class="vc"><div class="vc-feed"><div class="vc-live">🔴 LIVE · ${esc(c.name)}</div><div class="vc-face"><div class="av">${esc(c.exec[0])}</div><b>${esc(c.exec)}</b><small>${esc(c.role)}</small></div><div class="vc-me">${avatarHTML(44)}<span>You</span></div><div class="vc-bar"><span>🎤</span><span>📷</span><span class="end">📞</span></div></div>
+    <div class="vc-chat"><p class="brief">"${d.brief}"</p>${d.facts ? `<div class="facts">${d.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}${d.table ? tableHTML(d.table, false, false, new Set(), null) : ""}<p class="q">${esc(d.q)}</p>${!done && (state.hintOpen || res.hint) ? `<div class="tipbox"><b>Hint</b><span>${esc(d.hint)}</span></div>` : ""}
+    ${!done ? `<div class="choices">${d.options.map((o, i) => { const x = (res.wrongOpts || []).includes(i); return `<button class="choice reply ${x ? "crossed" : state.sel === i ? "sel" : ""}" ${x ? "disabled" : `data-act="opt" data-id="${i}"`}><b>💬 ${esc(o)}</b></button>`; }).join("")}</div><div class="sheetbtns"><button class="btn red" data-act="submit" ${state.sel === null ? "disabled" : ""}>Say it</button>${!(state.hintOpen || res.hint) ? `<button class="btn plain" data-act="hint">${isStudent() ? "Hint (−25%)" : "Hint"}</button>` : ""}${state.msg ? `<span class="err">${esc(state.msg)}</span>` : ""}</div>`
+      : `${resultHTML(tk, d, res, "mcq")}<div class="sheetbtns"><button class="btn red" data-act="close">End call</button>${tk.key !== "practice" ? `<button class="btn plain" data-act="practice" data-id="${tk.key}">Practice a similar one</button>` : ""}</div>`}</div></div>`, `Video call – ${c.exec}`, "🎥");
+}
+function pcView(tk) { const a = appOf(tk); return a === "video" ? videoView(tk) : a === "email" ? emailView(tk) : a === "pdf" ? pdfView(tk) : sheetView(tk); }
 function pcOpened(tk) {
   state.scratch = {}; state.cell = null; state.ping = null; state.ansDraft = ""; state.pcPower = true; clearTimeout(state.pingT);
   if (!isPC(tk) || resOf(tk.key).status === "done" || Math.random() > .45) return;
