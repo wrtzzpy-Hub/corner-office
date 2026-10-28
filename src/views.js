@@ -47,7 +47,7 @@ const views = {
     <p>Start as an intern at Haddad &amp; Partners and climb to Partner. Every day you visit a new company and help them with fun business puzzles.</p>
     <span class="label">Choose how you want to play</span>
     <div class="modes">
-      <button class="mode ${save.onboarded && save.mode === "casual" ? "cur" : ""}" data-act="mode" data-id="casual"><b>Play for fun</b><span>Easy business puzzles for anyone. Mostly multiple choice, a tip on every task, two tries, and a step-by-step answer whenever you slip up.</span></button>
+      <button class="mode ${save.onboarded && save.mode === "casual" ? "cur" : ""}" data-act="mode" data-id="casual"><b>Play for fun</b><span>Business brain-teasers for teens and up. No business knowledge needed: everything you need is in the question. Multiple choice, two tries, and a worked answer whenever you slip up.</span></button>
       <button class="mode ${save.onboarded && save.mode === "student" ? "cur" : ""}" data-act="mode" data-id="student"><b>Student mode</b><span>Pick your major and university year. Real calculations that match what you're studying and get harder as you climb.</span></button>
     </div>
     ${save.onboarded ? `<button class="btn ghost" data-act="hub">Back</button>` : ""}
@@ -102,7 +102,7 @@ const views = {
         <p style="margin:0 0 12px;color:var(--ink-dim)">${pr.rk === RANKS.length - 1 ? "You made Partner. Keep playing to raise your average." : pr.need ? `${N(pr.need)} XP until your interview for <b>${RANKS[pr.rk + 1]}</b>` : `You've earned an interview for <b>${RANKS[pr.rk + 1]}</b>!`} · ${N(cr.xp)} XP total</p>
         ${!myName() ? `<button class="namecta" data-act="you">✏️ Add your name and colour so the office knows who you are</button>` : ""}
         <div class="facts"><div class="fact"><div class="v">${cr.eng}</div><div class="k">${isStudent() ? "Engagements" : "Jobs done"}</div></div><div class="fact"><div class="v">${cr.eng ? Math.round(cr.sumPct / cr.eng) + "%" : "–"}</div><div class="k">Average score</div></div><div class="fact"><div class="v">${cr.eng ? cr.best + "%" : "–"}</div><div class="k">Best</div></div></div>
-        <p style="margin:0;color:var(--ink-dim);font-size:14px">Next ${JOB()}: ${engLength(pr.rk)} tasks${isStudent() && baseTier() >= 2 ? " plus a final recommendation" : ""} · ${isStudent() ? `difficulty ${"●".repeat(baseTier())}${"○".repeat(4 - baseTier())}` : `questions: ${FUN_LEVEL[funTier(pr.rk)].toLowerCase()}`}</p>
+        <p style="margin:0;color:var(--ink-dim);font-size:14px">Next ${JOB()}: ${engLength(pr.rk)} tasks${isStudent() && baseTier() >= 2 ? " plus a final recommendation" : ""} · ${isStudent() ? `difficulty ${"●".repeat(baseTier())}${"○".repeat(4 - baseTier())}` : `questions: ${FUN_LEVEL[Math.min(3, funTier(pr.rk) + 1)].toLowerCase()}`}</p>
       </article>
       <div class="menu">
         ${interviewEarned() ? (interviewReady() ? `<button class="btn red glow" data-act="interview"><span>Promotion interview</span><small>for ${RANKS[pr.rk + 1]} · 3 questions</small></button>` : `<div class="paper" style="padding:12px 14px;font-size:14px">${interviewer(pr.rk + 1).name}: "Not this time, but you were close. Finish one more ${JOB()} and you can try the interview again."</div>`) : ""}
@@ -186,7 +186,7 @@ const views = {
   },
   promo: () => { const rp = state.promo, iv = interviewer(rp.after); return `<article class="paper memo fadein"><div class="promo"><span class="label">Haddad &amp; Partners · Promotion</span><div class="big stamp-in">${esc(RANKS[rp.after])}</div>
     <div class="npc-line" style="justify-content:center"><div class="av" style="background:${iv.col}">${iv.av}</div></div>
-    <p>"${hi("Congratulations")}! You got ${rp.right} out of 3 in your interview. You're our new ${RANKS[rp.after]}. From your next ${JOB()} you'll handle ${engLength(rp.after)} tasks${!isStudent() && funTier(rp.after) > funTier(rp.before) ? `, and the questions get a bit trickier (level: ${FUN_LEVEL[funTier(rp.after)].toLowerCase()})` : ""}. ${perkLine(rp.after)}"</p><span class="sig">${esc(iv.name)}</span>
+    <p>"${hi("Congratulations")}! You got ${rp.right} out of 3 in your interview. You're our new ${RANKS[rp.after]}. From your next ${JOB()} you'll handle ${engLength(rp.after)} tasks${!isStudent() && funTier(rp.after) > funTier(rp.before) ? `, and the questions get a bit trickier (new question types unlocked)` : ""}. ${perkLine(rp.after)}"</p><span class="sig">${esc(iv.name)}</span>
     <button class="btn red" data-act="hub">Back to the firm</button></div></article>`; },
   interview: () => {
     const iv = state.iv, who = interviewer(iv.target);

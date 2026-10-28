@@ -139,4 +139,3 @@ fun({ id: "f_stockvalue", min: 3, major: "Stockroom", kind: "calc", title: "Valu
   return { brief: `The stockroom has ${boxes} boxes of ${thing}. Each box holds ${per} ${thing}, and each ${unit} cost the shop ${A(each)}.`, q: `How much are all the ${thing} worth?`, answer: a, unit: "AED", wrongs: wr(a, [boxes * per, boxes * each, per * each, a + per, boxes + per + each]), hint: `First find how many ${thing} there are (boxes × per box). Then multiply by the cost of one.`, explain: `${boxes} × ${per} = ${boxes * per} ${thing}.<br>${boxes * per} × ${each} = <b>${A(a)}</b>.` };
 } });
 
-for (const t of FUN) TPL[t.id] = t;

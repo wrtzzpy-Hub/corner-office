@@ -18,7 +18,7 @@ const isStudent = () => save.mode === "student";
 const CASUAL_IDS = new Set(["acc_classify", "acc_cutoff", "acc_count", "acc_materiality", "acc_baddebt", "acc_depr", "acc_prepaid", "fin_tvm", "fin_ratio", "fin_breakeven", "mkt_funnel", "mkt_classify", "mkt_campaign", "mkt_share", "mkt_pricing", "mgt_swot", "mgt_theory", "mgt_roster", "mgt_ops", "mgt_lead", "mgt_count", "eco_cpi", "eco_gdp", "eco_classify"]);
 function baseTier() { const rk = curRank(); return isStudent() ? Math.min(4, YEAR_BASE[save.year] + Math.floor((rk + (save.year === 4 ? 2 : 0)) / 3)) : 1; }
 const ptsFor = tier => 100 + 25 * (tier - 1);
-const funTier = rk => rk <= 2 ? 1 : rk <= 4 ? 2 : 3;
+const funTier = rk => rk <= 1 ? 1 : rk <= 3 ? 2 : 3;
 const engLength = rk => isStudent() ? Math.min(12, 6 + Math.floor(rk * .85)) : 4 + Math.floor(rk * .5);
 const bossTitle = () => { const rk = curRank(); return rk < 4 ? "Manager" : rk < 6 ? "Director" : "Managing Partner"; };
 
@@ -72,8 +72,9 @@ function newEngagement(daily) {
     for (let i = 0; i < n; i++) {
       const ft = funTier(rk), cand = FUN.filter(t => t.min <= ft && !used.has(t.id) && !(t.kind === "count" && countUsed)); if (!cand.length) break;
       const lastKind = list.length ? TPL[list[list.length - 1].tpl].kind : null, fresh = cand.filter(t => !recent.has(t.id) && t.kind !== lastKind);
-      const pool = fresh.length ? fresh : cand, top = pool.filter(t => t.min === ft && ft > 1), t = h.pick(top.length && r() < .5 ? top : pool); used.add(t.id); if (t.kind === "count") countUsed = true; majCount[t.major] = (majCount[t.major] || 0) + 1;
-      list.push({ tpl: t.id, tier: Math.max(t.min, ft - (r() < .25 ? 1 : 0)) });
+      const pool = fresh.length ? fresh : cand, top = pool.filter(t => t.min === ft && ft > 1), think = pool.filter(t => t.think), roll = r();
+      const t = h.pick(top.length && roll < .35 ? top : think.length && roll < .75 ? think : pool); used.add(t.id); if (t.kind === "count") countUsed = true; majCount[t.major] = (majCount[t.major] || 0) + 1;
+      list.push({ tpl: t.id, tier: Math.min(3, Math.max(t.min, ft + 1 - (r() < .25 ? 1 : 0))) });
     }
   } else for (let i = 0; i < n; i++) {
     const major = r() < .7 ? save.major : h.pick(MAJORS.filter(m => m !== save.major));

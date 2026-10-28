@@ -6,7 +6,7 @@ const FUN = [];
 const fun = t => { FUN.push({ min: 1, max: 3, ...t, fun: true }); };
 const A = x => "AED " + N(x);
 const wr = (a, list) => [...new Set(list.map(v => Math.round(v * 100) / 100))].filter(v => v > 0 && v !== a);
-const FUN_LEVEL = ["", "Easy", "Medium", "Tricky"];
+const FUN_LEVEL = ["", "Starter", "Challenging", "Expert"];
 
 fun({ id: "f_change", major: "Money", kind: "calc", title: "Give the right change", gen(r, T) {
   const h = H(r);
