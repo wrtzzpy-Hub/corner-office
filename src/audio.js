@@ -29,6 +29,7 @@ const Audio = (() => {
     power() { const t = ctx.currentTime; tone("sine", 220, t, .01, .08, .35, sfxBus, 880); tone("triangle", 1320, t + .3, .005, .05, .15); },
     key() { const t = ctx.currentTime; burst(t, "highpass", 2500 + Math.random() * 1500, 1, .03, .05, .02); },
     ping() { const t = ctx.currentTime; tone("sine", 988, t, .003, .1, .12); tone("sine", 1319, t + .1, .003, .1, .18); },
+    honk() { const t = ctx.currentTime; tone("sawtooth", 392, t, .01, .09, .25); tone("sawtooth", 494, t, .01, .07, .25); },
     ring() { const t = ctx.currentTime; for (let k = 0; k < 2; k++) for (let i = 0; i < 8; i++) tone("square", i % 2 ? 1320 : 1100, t + k * .6 + i * .045, .002, .05, .04); },
     task() { const t = ctx.currentTime; [784, 988, 1319].forEach((f, i) => tone("triangle", f, t + i * .08, .005, .22, .25)); },
     box() { const t = ctx.currentTime; tone("sine", 110, t, .003, .5, .12, sfxBus, 60); burst(t, "bandpass", 700, 1.2, .35, .08, .1); },

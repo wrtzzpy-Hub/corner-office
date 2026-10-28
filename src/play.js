@@ -104,7 +104,7 @@ const keys = {}; let locked = false, dragging = false, lastX = 0, lastY = 0;
 const isTouch = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
 let joy = null, lookTouch = null, bob = 0, stepT = 0, near = null, moved = 0, promptKey = "";
 const R = .3;
-const blocked = (x, z) => blockedR(x, z, R) || CW.some(c => c.path && Math.hypot(c.x - x, c.z - z) < .55);
+const blocked = (x, z) => blockedR(x, z, R) || carBlocks(x, z) || CW.some(c => c.path && Math.hypot(c.x - x, c.z - z) < .55);
 const paused = () => state.ui !== null || !!state.cam;
 addEventListener("keydown", e => {
   if (paused()) { if (e.key === "Escape" && ENG && ["task", "overview", "note"].includes(state.ui)) closeUI(); return; }
@@ -167,6 +167,7 @@ function update(dt) {
   } else bob *= .9;
   const turn = (n, target, k = 4) => { let diff = target - n.rot; while (diff > Math.PI) diff -= Math.PI * 2; while (diff < -Math.PI) diff += Math.PI * 2; n.rot += diff * Math.min(1, dt * k); };
   for (const n of Object.values(NPCS)) { const d = Math.hypot(p.x - n.x, p.z - n.z); turn(n, d < 5 ? Math.atan2(p.x - n.x, p.z - n.z) : n.base); }
+  updateCity(dt);
   for (const c of CW) {
     const d = Math.hypot(p.x - c.x, p.z - c.z);
     if (c.path) {
@@ -254,7 +255,7 @@ function syncTags() {
   const c = ENG && ENG.client, P = PALETTES[ENG ? ENG.palette : 0];
   const hc = c ? null : hqCfg(), who = hc ? (myName() || "Your") + (myName() ? "'s" : "") : "";
   if (FLOOR === "exec") SIGNS = [{ t: "Private lounge", x: 6, y: 2.75, z: 10.3 }, { t: hc && hc.ws === "exec" ? `${who} suite` : "Executive suite", x: 21, y: 2.75, z: 10.3, mine: hc && hc.ws === "exec" }, { t: "Dining room · Boardroom", x: 20, y: 2.8, z: 12.7 }, { t: "Executive Floor", x: 5, y: 2.8, z: 12.7 }];
-  else SIGNS = [{ t: "Meeting room", x: 6, y: 2.75, z: 12.3 }, { t: "Finance floor", x: 18, y: 2.75, z: 12.3 }, { t: c ? `${c.role} · ${c.exec.split(" ").slice(-1)[0]}` : "Director · Haddad", x: 30, y: 2.75, z: 12.3 }, { t: "Stockroom", x: 22, y: 2.8, z: 15.7 },
+  else SIGNS = [{ t: c ? "Haddad & Partners" : "Falcon Advisory", x: 5.5, y: 4.8, z: 37.9 }, { t: "Metro · Shops", x: 23, y: 4.2, z: 37.9 }, { t: c ? "Falcon Advisory" : "Gulf Plaza", x: 42.5, y: 4.8, z: 37.9 }, { t: c ? c.name : "Haddad & Partners HQ", x: DOOR_X, y: 3.4, z: 24.6 }, { t: "Karak Corner", x: 4, y: 2.8, z: 36.5 }, { t: "Meeting room", x: 6, y: 2.75, z: 12.3 }, { t: "Finance floor", x: 18, y: 2.75, z: 12.3 }, { t: c ? `${c.role} · ${c.exec.split(" ").slice(-1)[0]}` : "Director · Haddad", x: 30, y: 2.75, z: 12.3 }, { t: "Stockroom", x: 22, y: 2.8, z: 15.7 },
     { t: hc && hc.ws === "office" ? `${who} office` : "Senior Manager", x: 39, y: 2.75, z: 12.3, mine: hc && hc.ws === "office" }, { t: hc ? (hc.ws === "corner" ? `${who} corner office` : "Managing Partner") : "Chairman", x: 45, y: 2.75, z: 12.3, mine: hc && hc.ws === "corner" }, { t: "The Ledger Café", x: 41.5, y: 2.8, z: 15.7 }];
   signEls = SIGNS.map(s => { const d = document.createElement("div"); d.className = "sign" + (s.mine ? " mine" : ""); d.style.background = s.mine ? save.color : P.sign; d.textContent = s.t; labelsEl.append(d); return d; });
 }
@@ -283,6 +284,7 @@ function frame(now) {
     gl.uniformMatrix4fv(loc.uM, false, mul(trans(c.x, bobY, c.z), rotY(c.rot)));
     for (const b of meshBufs[c.mesh]) drawBuf(b, .12);
   }
+  drawCity(t);
   for (const [k, n] of Object.entries(NPCS)) {
     if (k !== "mariam" && !ENG && !hqWalk() && state.ui !== "hub") continue;
     if (FLOOR === "exec" && !(k === "exec" && ENG && ENG.office)) continue;
@@ -340,7 +342,7 @@ function placeLabels(W, H) {
 const mini = document.getElementById("mini"), mx = mini.getContext("2d");
 function drawMini(t) {
   if (mini.hidden) return;
-  const WW = FLOOR === "exec" ? 30 : 48, WH = FLOOR === "exec" ? 22 : 24;
+  const WW = FLOOR === "exec" ? 30 : 48, WH = FLOOR === "exec" ? 22 : 38;
   const W = mini.width, H = mini.height, s = Math.min(W / (WW + 1), H / (WH + 1)), ox = (W - WW * s) / 2, oy = (H - WH * s) / 2, k = W / 180;
   mx.clearRect(0, 0, W, H);
   ROOMS.forEach(r => { mx.fillStyle = r.key === "corr" ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.11)"; mx.fillRect(ox + r.x0 * s, oy + r.z0 * s, (r.x1 - r.x0) * s, (r.z1 - r.z0) * s); });
@@ -438,9 +440,9 @@ function startEngagement(eng) {
   hqKey = ""; state.coffee = ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null;
   if (ENG.ev && ["offered", "call"].includes(ENG.ev.status)) ENG.ev.status = "waiting";
   if (!ENG.briefed && !ENG.consequence) ENG.consequence = applyConsequence(ENG);
-  Object.assign(state.player, eng.office && FLOOR === "exec" ? EXEC_SPOTS.arrive : eng.office ? (STATIONS.pcdesk.room === "corner" ? { x: 45, z: 9.2, yaw: 0, pitch: 0 } : { x: 39, z: 9.0, yaw: 0, pitch: 0 }) : SPAWN); moved = 0; rebuildInter();
+  Object.assign(state.player, eng.office && FLOOR === "exec" ? EXEC_SPOTS.arrive : eng.office ? (STATIONS.pcdesk.room === "corner" ? { x: 45, z: 9.2, yaw: 0, pitch: 0 } : { x: 39, z: 9.0, yaw: 0, pitch: 0 }) : ENG.briefed ? SPAWN : { x: DOOR_X, z: 36.6, yaw: 0, pitch: 0 }); moved = 0; rebuildInter();
   state.ui = null; renderUI(); updatePrompt();
-  toast(ENG.office ? (ENG.briefed ? "Back in your office." : `Today's client: ${ENG.client.name}. Hind has your briefing.`) : ENG.briefed ? `Back at ${ENG.client.name}.` : `Welcome to ${ENG.client.name}. Sara is waiting in the meeting room.`);
+  toast(ENG.office ? (ENG.briefed ? "Back in your office." : `Today's client: ${ENG.client.name}. Hind has your briefing.`) : ENG.briefed ? `Back at ${ENG.client.name}.` : `${ENG.client.name} is across the street. Cross at the zebra crossing when the little man is green.`);
   if (ENG.office) for (const t of ENG.list) if (t.auto && !ENG.res[t.key]) delegate(t.key, t.auto);
   checkDelegated();
 }

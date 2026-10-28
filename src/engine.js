@@ -58,6 +58,7 @@ function buildTextures() {
   mkTex("menu", 512, 256, (g, w, h) => { g.fillStyle = "#1d2420"; g.fillRect(0, 0, w, h); speckle(g, w, h, 6000, .08, 1.5); g.fillStyle = "#f3ead6"; g.font = `bold 34px ${SERIF}`; g.textAlign = "center"; g.fillText("The Ledger Café", w / 2, 44); g.fillStyle = "#c9a24a"; g.fillRect(w / 2 - 120, 56, 240, 2); g.textAlign = "left"; g.font = `21px ${SANS}`;
     [["Karak chai", "8"], ["Flat white", "14"], ["Arabic coffee", "10"], ["Fresh juice", "16"], ["Date cake", "12"], ["Falafel wrap", "18"]].forEach(([n, pr], i) => { const y = 90 + i * 28; g.fillStyle = "#f3ead6"; g.fillText(n, 50, y); g.textAlign = "right"; g.fillStyle = "#e9c46a"; g.fillText("AED " + pr, w - 50, y); g.textAlign = "left"; }); });
   mkTex("neon", 512, 128, (g, w, h) => { g.fillStyle = "#120a18"; g.fillRect(0, 0, w, h); g.font = `bold 72px ${SANS}`; g.textAlign = "center"; g.textBaseline = "middle"; g.shadowColor = "#ff4fd8"; g.shadowBlur = 28; g.fillStyle = "#ffd6f6"; for (let k = 0; k < 3; k++) g.fillText("THE BOSS", w / 2, h / 2 + 4); });
+  mkTex("facade", 256, 256, (g, w, h) => { g.fillStyle = "#1a2632"; g.fillRect(0, 0, w, h); for (let y = 0; y < 8; y++) for (let x = 0; x < 4; x++) { const lit = Math.random() < .35; g.fillStyle = lit ? `rgba(255,${200 + Math.random() * 40 | 0},${120 + Math.random() * 60 | 0},${.55 + Math.random() * .35})` : `rgba(${60 + Math.random() * 30 | 0},${90 + Math.random() * 30 | 0},${120 + Math.random() * 30 | 0},.9)`; g.fillRect(x * 64 + 5, y * 32 + 4, 54, 24); } g.fillStyle = "rgba(255,255,255,.08)"; for (let x = 0; x < 4; x++) g.fillRect(x * 64, 0, 3, h); });
   mkTex("cert", 256, 256, (g, w, h) => { g.fillStyle = "#fbf7ec"; g.fillRect(0, 0, w, h); g.strokeStyle = "#c9a24a"; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20); g.fillStyle = "#1b2a40"; g.font = `bold 20px ${SERIF}`; g.textAlign = "center"; g.fillText("Certificate", w / 2, 78); g.font = `15px ${SERIF}`; g.fillText("of Promotion", w / 2, 104); g.fillStyle = "rgba(0,0,0,.25)"; for (let k = 0; k < 3; k++) g.fillRect(50, 130 + k * 18, w - 100, 3); g.fillStyle = "#c8372d"; g.beginPath(); g.arc(w / 2, 212, 16, 0, 7); g.fill(); });
   mkTex("skyline", 1024, 512, (g, w, h) => {
     const sky = g.createLinearGradient(0, 0, 0, h * .8); sky.addColorStop(0, "#081430"); sky.addColorStop(.45, "#1f3266"); sky.addColorStop(.75, "#a2546a"); sky.addColorStop(1, "#f0a35e"); g.fillStyle = sky; g.fillRect(0, 0, w, h);
@@ -165,7 +166,7 @@ const PALETTES = [
   { meet: "#5a4652", fin: "#3f5464", wall: "#f3efe9", accent: "#c79a55", sign: "#3a2a36", rug: "#3a3250" },
   { meet: "#3f5240", fin: "#57534a", wall: "#efede6", accent: "#bfa05a", sign: "#2a3a2c", rug: "#5a3a24" }];
 let ROOMS = [];
-const roomKey = (x, z) => FLOOR === "exec" ? execKey(x, z) : z < 12 ? (x < 12 ? "meet" : x < 24 ? "fin" : x < 36 ? "exec" : x < 42 ? "office" : "corner") : z < 16 ? "corr" : (x < 12 ? "lobby" : x < 36 ? "stock" : "cafe");
+const roomKey = (x, z) => FLOOR === "exec" ? execKey(x, z) : z >= 24.1 ? "street" : z < 12 ? (x < 12 ? "meet" : x < 24 ? "fin" : x < 36 ? "exec" : x < 42 ? "office" : "corner") : z < 16 ? "corr" : (x < 12 ? "lobby" : x < 36 ? "stock" : "cafe");
 const WORLD_W = 48;
 const roomAt = (x, z) => ROOMS.find(r => r.key === roomKey(x, z)) || ROOMS[0];
 
@@ -182,6 +183,7 @@ function buildWorld(cfg) {
     { key: "corner", name: "Corner office", x0: 42, z0: 0, x1: 48, z1: 12, surface: "tile" },
     { key: "corr", name: "Corridor", x0: 0, z0: 12, x1: 48, z1: 16, surface: "tile" },
     { key: "cafe", name: "Café", x0: 36, z0: 16, x1: 48, z1: 24, surface: "tile" },
+    { key: "street", name: "Street", x0: 0, z0: 24, x1: 48, z1: 38, surface: "concrete" },
     { key: "lobby", name: "Lobby", x0: 0, z0: 16, x1: 12, z1: 24, surface: "tile" },
     { key: "stock", name: "Stockroom", x0: 12, z0: 16, x1: 36, z1: 24, surface: "concrete" }];
   // floors
@@ -201,7 +203,7 @@ function buildWorld(cfg) {
   box(6, WALL_H - .05, 20, 6, .05, .25, "#fffbea", { em: 1, flat: true }); box(6, WALL_H - .05, 20, .25, .05, 5, "#fffbea", { em: 1, flat: true });
 
   // walls: [x1,z1,x2,z2,type]
-  const W = [[0, 0, 48, 0, "win"], [0, 24, 12, 24, "solid"], [12, 24, 36, 24, "solid"], [36, 24, 48, 24, "solid"], [0, 0, 0, 12, "solid"], [0, 12, 0, 24, "solid"], [36, 0, 36, 12, "solid"], [42, 0, 42, 12, "solid"], [48, 0, 48, 12, "win"], [48, 12, 48, 24, "solid"], [36, 16, 36, 24, "solid"],
+  const W = [[0, 0, 48, 0, "win"], [0, 24, 10.1, 24, "solid"], [12, 24, 36, 24, "solid"], [36, 24, 48, 24, "solid"], [0, 0, 0, 12, "solid"], [0, 12, 0, 24, "solid"], [36, 0, 36, 12, "solid"], [42, 0, 42, 12, "solid"], [48, 0, 48, 12, "win"], [48, 12, 48, 24, "solid"], [36, 16, 36, 24, "solid"],
     [36, 12, 38, 12, "wood"], [40, 12, 44, 12, "wood"], [46, 12, 48, 12, "wood"], [36, 16, 40, 16, "glass"], [43, 16, 48, 16, "glass"],
     [0, 12, 5, 12, "glass"], [7, 12, 12, 12, "glass"], [12, 12, 17, 12, "glass"], [19, 12, 24, 12, "glass"], [24, 12, 29, 12, "wood"], [31, 12, 36, 12, "wood"],
     [12, 0, 12, 12, "solid"], [24, 0, 24, 12, "solid"], [0, 16, 3, 16, "solid"], [9, 16, 12, 16, "solid"], [12, 16, 20, 16, "solid"], [24, 16, 36, 16, "solid"], [12, 16, 12, 24, "solid"]];
@@ -234,7 +236,7 @@ function buildWorld(cfg) {
   };
   win("x", .1, 11.9, .11, "+z", .1); win("x", 12.1, 23.9, .11, "+z", .37); win("x", 24.1, 35.9, .11, "+z", .64); win("x", 36.1, 41.9, .11, "+z", .91); win("x", 42.1, 47.9, .11, "+z", .18); win("z", .1, 11.9, 47.89, "-x", .2);
   // door frames and headers
-  [[5, 7, 12, "glass"], [17, 19, 12, "glass"], [29, 31, 12, "wood"], [38, 40, 12, "wood"], [44, 46, 12, "wood"], [40, 43, 16, "glass"], [3, 9, 16, "solid"], [20, 24, 16, "solid"]].forEach(([a, b, z, t]) => {
+  [[5, 7, 12, "glass"], [17, 19, 12, "glass"], [29, 31, 12, "wood"], [38, 40, 12, "wood"], [44, 46, 12, "wood"], [40, 43, 16, "glass"], [3, 9, 16, "solid"], [20, 24, 16, "solid"], [10.1, 12, 24, "solid"]].forEach(([a, b, z, t]) => {
     if (t === "glass") { box((a + b) / 2, 2.5, z, b - a, WALL_H - 2.5, .12, "#2b313a", { flat: true }); return; }
     box((a + b) / 2, 2.6, z, b - a - .004, WALL_H - 2.6, .196, t === "wood" ? "#6f4b31" : z === 16 && a === 20 ? "#b7bbbf" : P.wall, { tex: t === "wood" ? "wood" : "plaster", tile: 1.2 });
     box((a + b) / 2, 2.54, z, b - a + .16, .07, .26, P.accent, { flat: true, em: .15 }); [a, b].forEach(x => box(x, 0, z, .08, 2.6, .26, P.accent, { flat: true, em: .1 }));
@@ -245,11 +247,11 @@ function buildWorld(cfg) {
   box(2.15, 1.05, 20.4, 1.35, .06, 3.85, "#ffffff", { tex: "marble", tile: 1 }); box(2.76, .86, 20.4, .02, .05, 3.6, P.accent, { em: .5, flat: true });
   box(.17, .9, 20.4, .1, 1.9, 4.6, "#2a2420", { tex: "wood", tile: 1.2, faces: { "+x": { tex: "logo", em: .55 } } });
   panel("dash", 11.88, .9, 20, 5.2, 1.65, "-x", .95); box(11.92, .84, 20, .06, 1.77, 5.34, "#0b0f14", { flat: true });
-  panel("ticker", 6, 2.55, 23.88, 10, .26, "-z", 1, [0, 0, 2.5, 1]); box(6, 2.5, 23.93, 10.2, .36, .04, "#05080d", { flat: true });
+  panel("ticker", 5, 2.55, 23.88, 8, .26, "-z", 1, [0, 0, 2, 1]); box(5, 2.5, 23.93, 8.2, .36, .04, "#05080d", { flat: true });
   sofa(5.3, 23.25, "-z", 2.4); sofa(8.9, 23.25, "-z", 2.4);
   cyl(7.1, 0, 21.9, .55, .38, "#20262e", { solid: true, capTex: "marble", capColor: "#ffffff", capTile: .8 });
   box(7.0, .38, 21.85, .3, .02, .22, "#c8372d", { flat: true }); box(7.3, .38, 21.95, .28, .03, .2, "#e9e4da", { flat: true });
-  [[11.2, 23.2, 1], [.9, 23.2, 1], [11.2, 16.9, 0], [.9, 16.9, 0]].forEach(([x, z, big]) => plant(x, z, big));
+  [[.9, 23.2, 1], [11.2, 16.9, 0], [.9, 16.9, 0]].forEach(([x, z, big]) => plant(x, z, big));
   cyl(10.9, 0, 18.3, .28, WALL_H, "#ffffff", { tex: "marble", tile: 1, seg: 20, solid: true }); cyl(1.2, 0, 18.3, .28, WALL_H, "#ffffff", { tex: "marble", tile: 1, seg: 20, solid: true });
   box(6, .005, 17.6, 3.2, .01, 1.2, "#3a3a3e", { tex: "carpet", flat: true });
   /* ---- corridor ---- */
@@ -303,6 +305,7 @@ function buildWorld(cfg) {
   [[13.4, 18.6], [13.4, 19.4], [33.5, 17.8]].forEach(([x, z]) => { solid(x, 0, z, 1, .12, 1, "#a0835a", { tex: "wood", tile: .5 }); box(x, .12, z, .9, .7, .9, "#ffffff", { tex: "cardboard", fit: true }); });
   for (const n of Object.values(NPCS)) colliders.push([n.x - .3, n.z - .3, n.x + .3, n.z + .3]);
   for (const c of activeCoworkers(cfg)) if (!c.path) colliders.push([c.x - .3, c.z - .3, c.x + .3, c.z + .3]);
+  buildStreet(cfg);
 }
 
 /* ============================== EAST WING: OFFICES AND CAFÉ ============================== */
@@ -518,6 +521,7 @@ function initGL() {
   CUR = {}; cyl(0, 0, 0, .32, 3.1, "#f2df63", { seg: 20, noCap: true, em: 1 }); fxBufs.beam = upload(CUR.white);
   CUR = {}; sph(0, 0, 0, .14, "#f2df63", { seg: 4, rings: 2, sy: 1.5, em: 1 }); fxBufs.gem = upload(CUR.white);
   CUR = {}; cyl(0, 0, 0, .55, .02, "#f2df63", { seg: 28, em: 1 }); fxBufs.ring = upload(CUR.white);
+  for (const [k, c] of [["red", "#ff2a2a"], ["green", "#3dff7a"], ["off", "#2a2d31"]]) { CUR = {}; box(0, -.1, 0, .2, .2, .2, c, { em: k === "off" ? 0 : 1, flat: true }); fxBufs[k] = upload(CUR.white); }
   CUR = {}; box(0, 0, 0, .2, .04, .12, "#5fd0ff", { em: .9, flat: true }); sph(0, .04, 0, .05, "#ffffff", { em: 1, seg: 8, rings: 5 }); fxBufs.item = upload(CUR.white); CUR = B;
   gl.enable(gl.DEPTH_TEST); gl.clearColor(.06, .09, .15, 1);
 }
@@ -551,7 +555,15 @@ const MAIN_HUBS = { fin: [17.75, 6.2], meet: [10.6, 9.2], exec: [27.2, 8.6], sto
 DOORS = MAIN_DOORS; HUBS = MAIN_HUBS;
 const blockedR = (x, z, r) => colliders.some(c => x > c[0] - r && x < c[2] + r && z > c[1] - r && z < c[3] + r);
 function segBlocked(a, b) { const d = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let s = .4; s < d - .2; s += .1) { const t = s / d; if (blockedR(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, .3)) return true; } return false; }
-function pathTo(p, tg) {
+function pathTo(p0, tg0) {
+  /* the street connects to the rest of the building through the lobby door */
+  let p = p0, tg = tg0, pre = [], post = [];
+  const ra0 = roomKey(p.x, p.z), rb0 = tg.room;
+  if (FLOOR === "main" && ra0 === "street" && rb0 !== "street") { pre = [[DOOR_X, 25.4], [DOOR_X, 22.6], [9.6, 20.4]]; if (Math.abs(p.x - DOOR_X) > .8 && p.z > 25.6) pre.unshift([DOOR_X, Math.max(25.6, Math.min(35.8, p.z))]); p = { x: 9.6, z: 20.4 }; }
+  if (FLOOR === "main" && rb0 === "street" && ra0 !== "street") { post = [[DOOR_X, 25.4]]; if (Math.abs(tg.ap[0] - DOOR_X) > .8 && tg.ap[1] > 27) post.push([DOOR_X, tg.ap[1]]); tg = { room: "lobby", ap: [DOOR_X, 22.6] }; return [...pathCore(p, tg), ...post, tg0.ap]; }
+  return [...pre, ...pathCore(p, tg)];
+}
+function pathCore(p, tg) {
   const ra = roomKey(p.x, p.z), rb = tg.room, pts = [];
   if (ra !== rb) {
     if (ra !== "corr") { const d = DOORS[ra]; if (!(Math.abs(p.x - d.x) < 1.1 && Math.abs(p.z - d.in[1]) < 1.1)) { if (HUBS[ra] && segBlocked([p.x, p.z], d.in)) pts.push(HUBS[ra]); pts.push(d.in); } pts.push(d.out); }
