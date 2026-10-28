@@ -1,3 +1,10 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
 <title>Corner Office</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -399,6 +406,13 @@ body.pcmode #calc{right:7vw;bottom:70px;border-top:28px solid #2b3445;border-rad
 .vc-me{position:absolute;right:12px;bottom:56px;width:110px;height:80px;border-radius:8px;background:#222;display:grid;place-items:center;border:1px solid #444;color:#aaa;font-size:11px}.vc-bar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:10px}.vc-bar span{width:36px;height:36px;border-radius:50%;background:#333;display:grid;place-items:center}.vc-bar .end{background:#d22}
 .vc-chat{flex:1;overflow:auto;padding:14px 16px;background:#fff}.vc-chat .choice.reply{max-width:none}
 @media (max-width:760px){.vc{flex-direction:column;overflow:auto}.vc-feed{flex:none;height:200px}.vc-face .av{width:70px;height:70px;font-size:30px}.vc-chat{flex:none;overflow:visible}}
+
+#calc{width:330px!important}
+.calc-top{display:flex;align-items:center;gap:8px}.calc-tabs{display:flex;gap:4px;margin-left:auto}.calc-tabs button{border:1px solid var(--mat-line);background:none;color:var(--chalk-dim);border-radius:6px;padding:3px 10px;font:600 12px var(--f-mono,monospace);cursor:pointer}.calc-tabs button.on{background:var(--hi);color:var(--ink);border-color:var(--hi)}
+.calc-hist{margin:8px 0 6px;display:flex;flex-direction:column;gap:2px;max-height:110px;overflow:auto}.hrow{display:flex;justify-content:space-between;gap:8px;border:0;background:rgba(255,255,255,.04);color:var(--chalk-dim);padding:4px 8px;border-radius:5px;font:13px Menlo,Consolas,monospace;cursor:pointer;text-align:left}.hrow b{color:var(--chalk)}.hrow:hover{background:rgba(255,255,255,.1)}.calc-tip{margin:0;color:var(--chalk-dim);font-size:12px;line-height:1.6}.calc-tip code{color:var(--hi)}
+.calc-line{display:flex;flex-direction:column;gap:2px;background:#0e151e;border:1px solid var(--mat-line);border-radius:8px;padding:8px 10px;margin-bottom:8px}.calc-line input{border:0;background:none;color:#fff;font:600 18px Menlo,Consolas,monospace;outline:none;width:100%}.calc-live{align-self:flex-end;color:var(--hi);font:700 16px Menlo,Consolas,monospace;min-height:20px}.calc-live.bad{color:var(--chalk-dim)}
+.calc-keys{display:grid!important;grid-template-columns:repeat(6,1fr)!important;gap:5px!important}.calc-keys button{min-width:0;padding:10px 0!important;font-size:15px!important}.calc-keys.fx{grid-template-columns:repeat(4,1fr)!important}.calc-keys.fx button{font-size:13px!important}.calc-keys .fn{color:var(--hi)}
+td,th{color:inherit}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>
@@ -3065,57 +3079,85 @@ function mgViews() {
   };
 }
 /* ============================== CALCULATOR ==============================
-   A small on-screen calculator for task screens. Parses the expression itself (no eval). */
+   A Desmos-style scientific calculator: type or tap an expression, see the answer live,
+   keep a history, and use functions like mean, median, mode, sum, min, max, round and sqrt. No eval. */
 const calcEl = document.getElementById("calc");
-const calc = { expr: "", result: null, open: false };
-const CALC_KEYS = [["C", "clear"], ["⌫", "back"], ["%", "op"], ["÷", "op"], ["7"], ["8"], ["9"], ["×", "op"], ["4"], ["5"], ["6"], ["−", "op"], ["1"], ["2"], ["3"], ["+", "op"], ["0", "wide"], ["."], ["=", "eq"]];
-function calcEval(src) {
-  const toks = src.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-").match(/\d*\.?\d+|[-+*/%]/g);
-  if (!toks) return null;
-  const out = [], ops = [], prec = { "+": 1, "-": 1, "*": 2, "/": 2 };
-  let expectNum = true;
-  for (let i = 0; i < toks.length; i++) {
-    const t = toks[i];
-    if (/\d/.test(t)) { out.push(parseFloat(t)); expectNum = false; }
-    else if (t === "%") { if (expectNum) return null; out.push(out.pop() / 100); }
-    else if (t === "-" && expectNum) { out.push(0); ops.push("-"); }
-    else { if (expectNum) return null; while (ops.length && prec[ops[ops.length - 1]] >= prec[t]) out.push(ops.pop()); ops.push(t); expectNum = true; }
+const calc = { expr: "", open: false, tab: "123", hist: [], ans: 0 };
+const FN_HELP = { mean: "average of a list", median: "middle value", mode: "most common value", sum: "add them all", min: "smallest", max: "biggest", range: "max − min", count: "how many", round: "round(x, decimals)", sqrt: "square root", abs: "remove the minus", pct: "pct(part, whole) = % of", change: "change(old, new) = % change" };
+function mathEval(src, vars = {}) {
+  let s = String(src).toLowerCase().replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-").replace(/√/g, "sqrt").replace(/π/g, "pi").replace(/²/g, "^2").replace(/\s+/g, ""), i = 0;
+  s = s.replace(/aed/g, "");
+  const eat = c => s[i] === c ? (i++, true) : false;
+  const F = {
+    mean: a => a.reduce((x, y) => x + y, 0) / a.length, avg: a => F.mean(a), average: a => F.mean(a), sum: a => a.reduce((x, y) => x + y, 0), total: a => F.sum(a), count: a => a.length,
+    median: a => { const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; },
+    mode: a => { const c = new Map(); a.forEach(v => c.set(v, (c.get(v) || 0) + 1)); let best = a[0], n = 0; c.forEach((k, v) => { if (k > n) { n = k; best = v; } }); return best; },
+    min: a => Math.min(...a), max: a => Math.max(...a), range: a => Math.max(...a) - Math.min(...a),
+    round: a => { const p = Math.pow(10, a[1] || 0); return Math.round(a[0] * p) / p; }, sqrt: a => Math.sqrt(a[0]), abs: a => Math.abs(a[0]),
+    pct: a => a[0] / a[1] * 100, change: a => (a[1] - a[0]) / a[0] * 100, floor: a => Math.floor(a[0]), ceil: a => Math.ceil(a[0]),
+  };
+  function list() { const v = []; if (eat(")") || eat("]")) return v; do { v.push(expr()); } while (eat(",") || eat(";")); if (!(eat(")") || eat("]"))) throw 0; return v; }
+  function atom() {
+    if (eat("(")) { const v = expr(); if (!eat(")")) throw 0; return v; }
+    if (eat("-")) return -pow(); if (eat("+")) return pow();
+    const w = /^[a-z]+/.exec(s.slice(i));
+    if (w) {
+      const name = w[0]; i += name.length;
+      if (F[name]) { if (!eat("(")) throw 0; let a = list(); if (a.length === 1 && Array.isArray(a[0])) a = a[0]; a = a.flat(); if (!a.length) throw 0; return F[name](a); }
+      if (name === "pi") return Math.PI; if (name === "ans") return calc.ans; if (name in vars) return vars[name]; throw 0;
+    }
+    if (eat("[")) return list();
+    const n = /^(\d+\.?\d*|\.\d+)/.exec(s.slice(i)); if (n) { i += n[0].length; return parseFloat(n[0]); }
+    throw 0;
   }
-  if (expectNum) return null;
-  while (ops.length) out.push(ops.pop());
-  const st = [];
-  for (const t of out) { if (typeof t === "number") st.push(t); else { const b = st.pop(), a = st.pop(); if (a === undefined || b === undefined) return null; st.push(t === "+" ? a + b : t === "-" ? a - b : t === "*" ? a * b : b === 0 ? NaN : a / b); } }
-  const v = st[0]; return isFinite(v) ? Math.round(v * 1e8) / 1e8 : NaN;
+  function post() { let v = atom(); while (s[i] === "%" ) { i++; v /= 100; } return v; }
+  function pow() { const b = post(); if (eat("^")) return Math.pow(b, pow()); return b; }
+  function term() { let v = pow(); for (;;) { if (eat("*")) v *= pow(); else if (eat("/")) v /= pow(); else if (/[a-z(]/.test(s[i] || "")) v *= pow(); else return v; } }
+  function expr() { let v = term(); for (;;) { if (eat("+")) v += term(); else if (eat("-")) v -= term(); else return v; } }
+  try { if (!s) return null; const v = expr(); if (i < s.length || typeof v !== "number" || !isFinite(v)) return NaN; return Math.round(v * 1e10) / 1e10; } catch (e) { return NaN; }
 }
+const calcEval = src => mathEval(src);
+const KEYS = {
+  "123": [["7"], ["8"], ["9"], ["÷"], ["("], [")"], ["4"], ["5"], ["6"], ["×"], ["%"], ["^"], ["1"], ["2"], ["3"], ["−"], [","], ["ans"], ["0"], ["."], ["⌫", "back"], ["+"], ["C", "clear"], ["=", "eq"]],
+  "f(x)": [["mean(", "fn"], ["median(", "fn"], ["mode(", "fn"], ["sum(", "fn"], ["min(", "fn"], ["max(", "fn"], ["range(", "fn"], ["count(", "fn"], ["round(", "fn"], ["√(", "fn"], ["x²", "fn"], ["abs(", "fn"], ["pct(", "fn"], ["change(", "fn"], ["(", ""], [")", ""], [",", ""], ["⌫", "back"], ["C", "clear"], ["=", "eq"]],
+};
 function renderCalc() {
   calcEl.hidden = !calc.open; if (!calc.open) return;
-  const canUse = calc.result !== null && !isNaN(calc.result) && document.getElementById("ans");
-  calcEl.innerHTML = `<div class="calc-top"><b>Calculator</b><button class="calc-x" data-k="close" aria-label="Close calculator">×</button></div>
-    <div class="calc-screen" aria-live="polite"><span class="calc-expr">${esc(calc.expr || "0")}</span><span class="calc-res">${calc.result === null ? "" : isNaN(calc.result) ? "Can't divide by 0" : "= " + N(calc.result, 6)}</span></div>
-    <div class="calc-keys">${CALC_KEYS.map(([k, t]) => `<button data-k="${k}" class="${t || ""}">${k}</button>`).join("")}</div>
-    ${canUse ? `<button class="calc-use" data-k="use">Put ${esc(N(calc.result, 6))} in my answer</button>` : ""}`;
+  const live = mathEval(calc.expr), canUse = document.getElementById("ans") || document.querySelector("[data-act=opt]");
+  calcEl.innerHTML = `<div class="calc-top"><b>Calculator</b><div class="calc-tabs">${Object.keys(KEYS).map(t => `<button data-k="tab:${t}" class="${calc.tab === t ? "on" : ""}">${t}</button>`).join("")}</div><button class="calc-x" data-k="close" aria-label="Close calculator">×</button></div>
+    <div class="calc-hist">${calc.hist.slice(-4).map((h, n) => `<button class="hrow" data-k="hist:${calc.hist.length - Math.min(4, calc.hist.length) + n}"><span>${esc(h.e)}</span><b>= ${esc(N(h.v, 6))}</b></button>`).join("") || `<p class="calc-tip">Try <code>mean(12, 15, 21)</code>, <code>20% × 350</code> or <code>change(400, 560)</code></p>`}</div>
+    <div class="calc-line"><input id="calcin" autocomplete="off" spellcheck="false" ${isTouch ? "inputmode=\"none\"" : ""} value="${esc(calc.expr)}" placeholder="Type a calculation…" aria-label="Calculation"><span class="calc-live ${live !== null && isNaN(live) ? "bad" : ""}">${live === null ? "" : isNaN(live) ? "…" : "= " + esc(N(live, 6))}</span></div>
+    <div class="calc-keys ${calc.tab === "f(x)" ? "fx" : ""}">${KEYS[calc.tab].map(([k, t]) => `<button data-k="${esc(k)}" class="${t || ""}" title="${esc(FN_HELP[k.replace(/[(√]/g, "")] || "")}">${esc(k === "√(" ? "√" : k)}</button>`).join("")}</div>
+    ${canUse && live !== null && !isNaN(live) ? `<button class="calc-use" data-k="use">Use ${esc(N(live, 6))} in my answer</button>` : ""}`;
+  const inp = document.getElementById("calcin"); if (inp && !isTouch) { inp.focus({ preventScroll: true }); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+function calcCommit() {
+  const v = mathEval(calc.expr); if (v === null || isNaN(v)) { Audio.play("bad"); return; }
+  calc.hist.push({ e: calc.expr, v }); if (calc.hist.length > 30) calc.hist.shift(); calc.ans = v; calc.expr = ""; Audio.play("tick");
 }
 function calcPress(k) {
   Audio.play("click");
   if (k === "close") { calc.open = false; return renderCalc(); }
-  if (k === "C") { calc.expr = ""; calc.result = null; }
-  else if (k === "⌫") { calc.expr = calc.expr.slice(0, -1); calc.result = null; }
-  else if (k === "=") { const v = calcEval(calc.expr); calc.result = v === null ? NaN : v; }
-  else if (k === "use") { const a = document.getElementById("ans"); if (a && calc.result !== null && !isNaN(calc.result)) { a.value = String(calc.result); a.focus({ preventScroll: true }); } }
-  else {
-    if (calc.result !== null && !isNaN(calc.result)) calc.expr = /[\d.]/.test(k) ? "" : String(calc.result);
-    calc.result = null; calc.expr = (calc.expr + k).slice(0, 40);
+  if (k.startsWith("tab:")) calc.tab = k.slice(4);
+  else if (k.startsWith("hist:")) { const h = calc.hist[+k.slice(5)]; if (h) calc.expr += N(h.v, 10).replace(/,/g, ""); }
+  else if (k === "C") calc.expr = "";
+  else if (k === "⌫") calc.expr = calc.expr.slice(0, -1);
+  else if (k === "=") calcCommit();
+  else if (k === "use") {
+    const v = mathEval(calc.expr || String(calc.ans)), a = document.getElementById("ans");
+    if (v !== null && !isNaN(v)) { if (a) { a.value = String(v); state.ansDraft = a.value; a.focus({ preventScroll: true }); } else { const opt = [...document.querySelectorAll("[data-act=opt]")].find(b => parseNum(b.textContent) !== null && Math.abs(parseNum(b.textContent) - v) < .01 * Math.max(1, Math.abs(v))); if (opt) opt.click(); else toast(`${N(v, 4)} isn't one of the choices. Check your working!`); } }
   }
+  else if (k === "x²") calc.expr += "^2";
+  else if (k === "√(") calc.expr += "sqrt(";
+  else calc.expr = (calc.expr + k).slice(0, 120);
   renderCalc();
 }
 calcEl.addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (b) { e.stopPropagation(); calcPress(b.dataset.k); } });
+calcEl.addEventListener("input", e => { if (e.target.id === "calcin") { calc.expr = e.target.value; const live = mathEval(calc.expr), el = calcEl.querySelector(".calc-live"); if (el) { el.textContent = live === null ? "" : isNaN(live) ? "…" : "= " + N(live, 6); el.classList.toggle("bad", live !== null && isNaN(live)); } } });
+calcEl.addEventListener("keydown", e => { if (e.target.id !== "calcin") return; e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); calcCommit(); renderCalc(); } if (e.key === "Escape") { e.preventDefault(); calcPress("close"); renderUI(); } });
 addEventListener("keydown", e => {
-  if (!calc.open || state.ui !== "task") return;
+  if (!calc.open || !["task", "interview", "call", "inbox", "board"].includes(state.ui)) return;
   if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); calcPress("close"); renderUI(); return; }
-  if (e.target.matches && e.target.matches("input,select,textarea")) return;
-  const map = { "*": "×", "/": "÷", "-": "−", "Enter": "=", "Backspace": "⌫", "Escape": "close" };
-  const k = map[e.key] || e.key;
-  if (/^[0-9.+%=]$/.test(k) || ["×", "÷", "−", "⌫", "close"].includes(k)) { e.preventDefault(); e.stopPropagation(); calcPress(k === "=" ? "=" : k); }
 }, true);
 function toggleCalc(force) { calc.open = force ?? !calc.open; if (calc.open && document.activeElement && document.activeElement.blur) document.activeElement.blur(); renderCalc(); }
 /* ============================== THE COMPUTER ==============================
@@ -3719,3 +3761,6 @@ if (location.hash === "#test") window.__tt = { get state() { return state; }, ge
 boot();
 })();
 </script>
+
+</body>
+</html>
