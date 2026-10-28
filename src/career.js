@@ -57,6 +57,7 @@ const STATIONS = {
 const BASE_STATIONS = {}; for (const [k, v] of Object.entries(STATIONS)) BASE_STATIONS[k] = { ...v };
 function useStations(set) { for (const k of Object.keys(STATIONS)) delete STATIONS[k]; for (const [k, v] of Object.entries(set)) STATIONS[k] = { ...v }; }
 function officeStations(ws) {
+  if (ws === "exec") return { pcdesk: { ...EXEC_SPOTS.pc }, exec: { ...EXEC_SPOTS.visitor } };
   return ws === "corner" ? { pcdesk: { x: 44.3, z: 5.0, y: 1.5, kind: "desk", cap: 99, reach: 2.6, place: "your computer", room: "corner", ap: [44.3, 6.7] }, exec: { x: 45.8, z: 6.0, y: 1.75, kind: "npc", cap: 99, reach: 2.6, place: "your visitor chairs", room: "corner", ap: [46.3, 7.6] } }
     : { pcdesk: { x: 39.6, z: 4.7, y: 1.5, kind: "desk", cap: 99, reach: 2.6, place: "your computer", room: "office", ap: [39.9, 6.4] }, exec: { x: 38.4, z: 5.55, y: 1.75, kind: "npc", cap: 99, reach: 2.6, place: "your visitor chairs", room: "office", ap: [37.9, 7.1] } };
 }

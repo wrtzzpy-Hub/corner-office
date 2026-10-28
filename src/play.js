@@ -17,16 +17,22 @@ const state = { ui: save.onboarded ? "hub" : "ob0", obReturn: null, player: { ..
 
 /* ============================== HQ (walking around your own firm) ============================== */
 const hqWalk = () => !ENG && save.onboarded;
-const hqCfg = () => { const rank = curRank(); return { rank, ws: WS_OF(rank), color: save.color, name: myName(), badges: Object.keys(save.badges).length, owned: SHOP.filter(i => save.owned[i.id] && canPlace(i)).map(i => i.id) }; };
+const hqCfg = () => { const rank = curRank(); return { floor: state.floor || "main", rank, ws: WS_OF(rank), color: save.color, name: myName(), badges: Object.keys(save.badges).length, owned: SHOP.filter(i => save.owned[i.id] && canPlace(i)).map(i => i.id) }; };
 let hqKey = "";
 function ensureHQWorld(force) {
   if (ENG || !prog) return;
   const c = hqCfg(), k = JSON.stringify(c);
   if (k === hqKey && !force) return;
-  hqKey = k; NPCS.exec.mesh = "execS"; uploadWorld({ palette: 0, bay: 18, stripe: "#c8372d", seed: 1, hq: c }); rebuildInter();
+  hqKey = k; NPCS.exec.mesh = "execS"; NPCS.exec.onExec = false; uploadWorld({ palette: 0, bay: 18, stripe: "#c8372d", seed: 1, hq: c, floor: c.floor }); rebuildInter();
 }
 const MYSPACE = { hot: { x: 15, z: 10.35, y: 1.25, ap: [15, 11.55], room: "fin", place: "the hot desk on the Finance floor" }, desk: { x: 15, z: 10.35, y: 1.25, ap: [15, 11.55], room: "fin", place: "your desk on the Finance floor" }, office: { x: 39, z: 4.2, y: 1.6, ap: [39, 6.6], room: "office", place: "your private office", reach: 3 }, corner: { x: 45, z: 4.4, y: 1.7, ap: [45, 7.1], room: "corner", place: "the corner office", reach: 3.2 } };
-const WS_NAME = { hot: "Hot desk", desk: "Your desk", office: "Your office", corner: "The corner office" };
+const WS_NAME = { hot: "Hot desk", desk: "Your desk", office: "Your office", corner: "The corner office", exec: "Your suite" };
+MYSPACE.exec = EXEC_SPOTS.myspace;
+function travelLift(to) {
+  if (state.cam) return; const fade = document.createElement("div"); fade.className = "liftfade"; fade.innerHTML = `<div><span>${to === "exec" ? "▲" : "▼"}</span><b>${to === "exec" ? "Executive Floor" : "Main floor"}</b></div>`; document.body.append(fade);
+  Audio.play("blip"); setTimeout(() => { state.floor = to; hqKey = ""; ensureHQWorld(true); Object.assign(state.player, to === "exec" ? EXEC_SPOTS.arrive : { x: 46.4, z: 14, yaw: Math.PI / 2, pitch: 0 }); Audio.play("ping"); renderHud(); }, 600);
+  setTimeout(() => fade.remove(), 1500);
+}
 const GREET = [
   ["Hi! You must be the new intern.", "Welcome aboard! The café makes great karak.", "Morning! Ask Sara if you get stuck.", "First week? You'll love it here."],
   ["Morning, {n}!", "Hey {n}, nice work on that last job.", "Hi {n}! Lunch later?", "{n}! Did you see the new café menu?"],
@@ -53,11 +59,20 @@ const firstName = n => n.split(" ")[0];
 function stationTasks(st) { return ENG ? ENG.list.filter(t => t.st === st) : []; }
 function rebuildInter() {
   INTER = [];
-  INTER.push({ id: "mariam", ...FIXED.mariam, label: "Mariam · Reception", verb: "Talk to Mariam", fixed: true });
+  if (FLOOR === "main") INTER.push({ id: "mariam", ...FIXED.mariam, label: "Mariam · Reception", verb: "Talk to Mariam", fixed: true });
   for (const c of CW) if (!(ENG && ENG.office && c.id === "hind")) INTER.push({ id: "cw:" + c.id, cw: c, x: c.x, z: c.z, y: c.mesh.endsWith("_s") ? 1.55 : 2.0, ap: c.barista ? [45, 21.55] : [c.x, c.z], room: roomKey(c.x, c.z), label: `${c.name} · ${c.role}`, place: c.barista ? "the café" : c.office === "corner" ? "the corner office" : ROOMS.find(r => r.key === roomKey(c.x, c.z)).name.toLowerCase().replace(/^/, "the "), verb: c.barista ? (state.coffee === "fetch" ? "Pick up the coffee order" : "Order a coffee") : `Say hi to ${c.name.split(" ")[0]}`, reach: c.barista ? 2.6 : 2.2, cwTag: true });
-  if (!ENG) {
+  if (!ENG && FLOOR === "exec") {
+    const hc = hqCfg();
+    INTER.push({ id: "myspace", ...EXEC_SPOTS.myspace, label: hc.ws === "exec" ? `${myName() || "You"} · ${RANKS[hc.rank]}` : "Executive suite", verb: openDeal() ? "Check your inbox (1 new)" : "Sit at your desk", fixed: true, mine: true });
+    INTER.push({ id: "coffeemeet", ...EXEC_SPOTS.coffee, label: "Private lounge", verb: coffeeLeft() > 0 ? "Invite a client for coffee" : "No more coffees today", fixed: true });
+    INTER.push({ id: "lunch", ...EXEC_SPOTS.lunch, label: "Private dining", verb: lunchLeft() > 0 ? "Host a client lunch" : "Lunch is done for today", fixed: true });
+    INTER.push({ id: "boardtable", ...EXEC_SPOTS.board, label: "Boardroom", verb: boardReady() ? "Chair today's board meeting" : "The board meets again tomorrow", fixed: true });
+    INTER.push({ id: "liftdown", ...EXEC_SPOTS.lift, label: "Private lift", verb: "Take the lift down", fixed: true, place: "the private lift" });
+  } else if (!ENG) {
     const hc = hqCfg(), ms = MYSPACE[hc.ws], ivw = interviewReady() ? interviewer(curRank() + 1) : null;
-    INTER.push({ id: "myspace", ...ms, label: hc.ws === "hot" ? "Hot desk · interns" : `${myName() || "You"} · ${RANKS[hc.rank]}`, verb: openDeal() ? "Check your inbox (1 new)" : hc.ws === "hot" ? "Sit at the hot desk" : `Sit at ${WS_NAME[hc.ws].toLowerCase()}`, fixed: true, mine: true });
+    INTER.push({ id: "lift", x: 47.6, z: 14, y: 2.2, room: "corr", ap: [46.6, 14], reach: 2.4, label: "Private lift · Executive Floor", verb: hc.rank >= 5 ? "Take the lift to the Executive Floor" : "Executive Floor only (Senior Manager+)", fixed: true, place: "the private lift at the end of the corridor" });
+    INTER.push({ id: "coffeemeet", x: 38.4, z: 21.8, y: 1.3, room: "cafe", ap: [39.6, 20.7], reach: 2.2, label: "Café table", verb: coffeeLeft() > 0 ? "Meet a client for coffee" : "No more coffees today", fixed: true, place: "the café" });
+    if (hc.ws !== "exec") INTER.push({ id: "myspace", ...ms, label: hc.ws === "hot" ? "Hot desk · interns" : `${myName() || "You"} · ${RANKS[hc.rank]}`, verb: openDeal() ? "Check your inbox (1 new)" : hc.ws === "hot" ? "Sit at the hot desk" : `Sit at ${WS_NAME[hc.ws].toLowerCase()}`, fixed: true, mine: true });
     INTER.push({ id: "sara", ...FIXED.sara, label: `Sara · ${RANKS[Math.min(5, Math.max(4, curRank() + 1))]}`, verb: ivw && ivw.name === "Sara" ? "Start your promotion interview" : "Ask Sara for a job", fixed: true });
     INTER.push({ id: "khalid", x: NPCS.exec.x, z: NPCS.exec.z, y: 2.15, room: "exec", ap: STATIONS.exec.ap, reach: 4, label: "Khalid Haddad · Director", place: "the Executive suite", verb: ivw && ivw.name === "Khalid Haddad" ? "Start your promotion interview" : "Say hello to Khalid", fixed: true });
     INTER.push({ id: "boardtable", x: 6, z: 5.9, y: 1.35, room: "meet", ap: [6, 7.85], label: "Board meeting", verb: boardReady() ? "Start today's board meeting" : "The board meets again tomorrow", fixed: true, place: "the meeting room" });
@@ -66,9 +81,9 @@ function rebuildInter() {
     const lay = CW.find(c => c.id === "layla"); if (lay && ivw && ivw.name === "Layla Haddad") { const it = INTER.find(i => i.id === "cw:layla"); it.verb = "Start your promotion interview"; it.ap = [45, 6.9]; it.reach = 3.9; }
   }
   if (ENG) {
-    INTER.push({ id: "notice", ...FIXED.notice, label: "Notice board", verb: "Read the client fact sheet", fixed: true });
+    if (FLOOR === "main") INTER.push({ id: "notice", ...FIXED.notice, label: "Notice board", verb: "Read the client fact sheet", fixed: true });
     const capPending = ENG.capT && !isDone("cap");
-    INTER.push({ id: "sara", ...(ENG.office ? HIND_SPOT : FIXED.sara), label: ENG.office ? "Hind · Your assistant" : `Sara · ${bossTitle()}`, verb: !ENG.briefed ? "Get your briefing" : allTasksDone() ? (capPending ? "Give your recommendation" : "Hand in your report") : "Check in with Sara", fixed: true });
+    INTER.push({ id: "sara", ...(ENG.office ? (FLOOR === "exec" ? EXEC_SPOTS.hindTalk : HIND_SPOT) : FIXED.sara), label: ENG.office ? "Hind · Your assistant" : `Sara · ${bossTitle()}`, verb: !ENG.briefed ? "Get your briefing" : allTasksDone() ? (capPending ? "Give your recommendation" : "Hand in your report") : "Check in with Sara", fixed: true });
     for (const [id, s] of Object.entries(STATIONS)) {
       const ts = stationTasks(id); if (!ts.length) continue;
       const pend = ts.filter(t => !isDone(t.key) && !isAway(t.key)); let label, verb;
@@ -195,7 +210,9 @@ function pickGuide() {
   if (!ENG) {
     if (!hqWalk()) return null;
     if (state.coffee === "fetch") return interById("cw:hamza");
+    if (FLOOR === "exec") return openDeal() || !state.hqSeen ? interById("myspace") : interviewReady() ? interById("liftdown") : null;
     if (interviewReady()) return INTER.find(i => i.verb === "Start your promotion interview") || null;
+    if (curRank() >= 5 && (openDeal() || !state.hqSeen)) return interById("lift");
     if (openDeal()) return interById("myspace");
     if (!state.hqSeen) return interById("myspace");
     return interById("sara");
@@ -236,7 +253,8 @@ function syncTags() {
   signEls.forEach(e => e.remove()); bubbleEls.forEach(e => e.remove()); bubbleEls = new Map();
   const c = ENG && ENG.client, P = PALETTES[ENG ? ENG.palette : 0];
   const hc = c ? null : hqCfg(), who = hc ? (myName() || "Your") + (myName() ? "'s" : "") : "";
-  SIGNS = [{ t: "Meeting room", x: 6, y: 2.75, z: 12.3 }, { t: "Finance floor", x: 18, y: 2.75, z: 12.3 }, { t: c ? `${c.role} · ${c.exec.split(" ").slice(-1)[0]}` : "Director · Haddad", x: 30, y: 2.75, z: 12.3 }, { t: "Stockroom", x: 22, y: 2.8, z: 15.7 },
+  if (FLOOR === "exec") SIGNS = [{ t: "Private lounge", x: 6, y: 2.75, z: 10.3 }, { t: hc && hc.ws === "exec" ? `${who} suite` : "Executive suite", x: 21, y: 2.75, z: 10.3, mine: hc && hc.ws === "exec" }, { t: "Dining room · Boardroom", x: 20, y: 2.8, z: 12.7 }, { t: "Executive Floor", x: 5, y: 2.8, z: 12.7 }];
+  else SIGNS = [{ t: "Meeting room", x: 6, y: 2.75, z: 12.3 }, { t: "Finance floor", x: 18, y: 2.75, z: 12.3 }, { t: c ? `${c.role} · ${c.exec.split(" ").slice(-1)[0]}` : "Director · Haddad", x: 30, y: 2.75, z: 12.3 }, { t: "Stockroom", x: 22, y: 2.8, z: 15.7 },
     { t: hc && hc.ws === "office" ? `${who} office` : "Senior Manager", x: 39, y: 2.75, z: 12.3, mine: hc && hc.ws === "office" }, { t: hc ? (hc.ws === "corner" ? `${who} corner office` : "Managing Partner") : "Chairman", x: 45, y: 2.75, z: 12.3, mine: hc && hc.ws === "corner" }, { t: "The Ledger Café", x: 41.5, y: 2.8, z: 15.7 }];
   signEls = SIGNS.map(s => { const d = document.createElement("div"); d.className = "sign" + (s.mine ? " mine" : ""); d.style.background = s.mine ? save.color : P.sign; d.textContent = s.t; labelsEl.append(d); return d; });
 }
@@ -267,6 +285,7 @@ function frame(now) {
   }
   for (const [k, n] of Object.entries(NPCS)) {
     if (k !== "mariam" && !ENG && !hqWalk() && state.ui !== "hub") continue;
+    if (FLOOR === "exec" && !(k === "exec" && ENG && ENG.office)) continue;
     gl.uniformMatrix4fv(loc.uM, false, mul(trans(n.x, Math.sin(t * 1.6 + n.x) * .006, n.z), rotY(n.rot)));
     for (const b of meshBufs[n.mesh]) drawBuf(b, .12);
   }
@@ -321,11 +340,12 @@ function placeLabels(W, H) {
 const mini = document.getElementById("mini"), mx = mini.getContext("2d");
 function drawMini(t) {
   if (mini.hidden) return;
-  const W = mini.width, H = mini.height, s = Math.min(W / 49, H / 25), ox = (W - 48 * s) / 2, oy = (H - 24 * s) / 2, k = W / 180;
+  const WW = FLOOR === "exec" ? 30 : 48, WH = FLOOR === "exec" ? 22 : 24;
+  const W = mini.width, H = mini.height, s = Math.min(W / (WW + 1), H / (WH + 1)), ox = (W - WW * s) / 2, oy = (H - WH * s) / 2, k = W / 180;
   mx.clearRect(0, 0, W, H);
   ROOMS.forEach(r => { mx.fillStyle = r.key === "corr" ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.11)"; mx.fillRect(ox + r.x0 * s, oy + r.z0 * s, (r.x1 - r.x0) * s, (r.z1 - r.z0) * s); });
   mx.strokeStyle = "#93a3b5"; mx.lineWidth = 2; mx.beginPath(); walls2d.forEach(w => { mx.moveTo(ox + w[0] * s, oy + w[1] * s); mx.lineTo(ox + w[2] * s, oy + w[3] * s); }); mx.stroke();
-  mx.strokeStyle = "rgba(160,200,230,.7)"; mx.setLineDash([3 * k, 2 * k]); mx.beginPath(); [[0, 12, 5], [7, 12, 17], [19, 12, 24], [36, 16, 40], [43, 16, 48]].forEach(([a, z, b]) => { mx.moveTo(ox + a * s, oy + z * s); mx.lineTo(ox + b * s, oy + z * s); }); mx.stroke(); mx.setLineDash([]);
+  mx.strokeStyle = "rgba(160,200,230,.7)"; mx.setLineDash([3 * k, 2 * k]); mx.beginPath(); (FLOOR === "exec" ? [[10, 13, 19], [21, 13, 30]] : [[0, 12, 5], [7, 12, 17], [19, 12, 24], [36, 16, 40], [43, 16, 48]]).forEach(([a, z, b]) => { mx.moveTo(ox + a * s, oy + z * s); mx.lineTo(ox + b * s, oy + z * s); }); mx.stroke(); mx.setLineDash([]);
   const p = state.player;
   if (guide.it) { mx.strokeStyle = "#f2df63"; mx.lineWidth = 2.5 * k; mx.beginPath(); mx.moveTo(ox + p.x * s, oy + p.z * s); guide.pts.forEach(q => mx.lineTo(ox + q[0] * s, oy + q[1] * s)); mx.stroke(); mx.fillStyle = "#f2df63"; mx.beginPath(); mx.arc(ox + guide.it.x * s, oy + guide.it.z * s, (3.5 + Math.sin(t * 5) * 1.2) * k, 0, 7); mx.fill(); }
   CW.forEach(c => { mx.fillStyle = "rgba(147,163,181,.8)"; mx.beginPath(); mx.arc(ox + c.x * s, oy + c.z * s, 1.6 * k, 0, 7); mx.fill(); });
@@ -378,7 +398,10 @@ function renderHud() {
     <button class="iconbtn" data-act="sfx" aria-pressed="${save.sfx}" aria-label="Sound effects">◉<span class="hide-s"> ${save.sfx ? "On" : "Off"}</span></button>`;
   const showWorldUI = ((ENG && !ENG.done) || hqWalk()) && state.ui === null;
   objEl.hidden = mini.hidden = !showWorldUI; document.getElementById("cross").hidden = !showWorldUI;
-  if (showWorldUI && !ENG) {
+  if (showWorldUI && !ENG && FLOOR === "exec") {
+    const items = [openDeal() ? { t: "📧 New message about a deal", s: "Check the inbox at your desk", cur: true } : null, { t: "Visit your suite", s: "North-east corner", cur: !state.hqSeen && !openDeal(), done: state.hqSeen }, { t: "☕ Coffee with a client", s: `Private lounge · ${coffeeLeft()} left today`, done: coffeeLeft() <= 0 }, { t: "🍽️ Host a client lunch", s: "Private dining room", done: lunchLeft() <= 0 }, boardReady() ? { t: "🏛️ Chair the board meeting", s: "Boardroom table" } : null, interviewReady() ? { t: "Promotion interview", s: "Take the lift down", cur: true } : null, { t: "Start a job", s: `${isTouch ? "Tap" : "Press"} Menu` }].filter(Boolean);
+    objEl.innerHTML = `<h4><span>Executive Floor</span><span>${esc(RANKS[curRank()])}</span></h4><ol>${items.map(i => `<li class="${i.cur ? "cur" : ""} ${i.done ? "done" : ""}"><span>${i.done ? "✓ " : ""}${esc(i.t)}${i.s ? `<small>${esc(i.s)}</small>` : ""}</span></li>`).join("")}</ol>`;
+  } else if (showWorldUI && !ENG) {
     const hc = hqCfg(), iv = interviewReady() ? interviewer(hc.rank + 1) : null;
     const items = [iv ? { t: `Promotion interview with ${iv.name}`, s: `to become ${RANKS[hc.rank + 1]}`, cur: true } : null, openDeal() ? { t: "📧 New message about a deal", s: `Check the inbox at ${WS_NAME[hc.ws].toLowerCase()}`, cur: !iv } : null, { t: `Visit ${WS_NAME[hc.ws].toLowerCase()}`, s: MYSPACE[hc.ws].place, cur: !iv && !state.hqSeen, done: state.hqSeen }, state.coffee === "fetch" ? { t: "Pick up the coffee order", s: "The Ledger Café", cur: true } : { t: "Grab a coffee", s: "The Ledger Café, east end", done: state.hadCoffee }, boardReady() ? { t: "🏛️ Today's board meeting", s: "Meeting room table" } : null, { t: "Talk to Sara to start a job", s: "Meeting room", cur: !iv && state.hqSeen }].filter(Boolean);
     objEl.innerHTML = `<h4><span>Haddad &amp; Partners HQ</span><span>${esc(RANKS[hc.rank])}</span></h4><ol>${items.map(i => `<li class="${i.cur ? "cur" : ""} ${i.done ? "done" : ""}"><span>${i.done ? "✓ " : ""}${esc(i.t)}${i.s ? `<small>${esc(i.s)}</small>` : ""}</span></li>`).join("")}</ol>`;
@@ -410,17 +433,17 @@ function startEngagement(eng) {
   planEvent(eng); useStations(eng.office ? officeStations(WS_OF(curRank())) : BASE_STATIONS);
   materialize(eng); ENG.ev = eng.ev; ENG.bonus = eng.bonus || [];
   NPCS.exec.mesh = (MESH_FOR[eng.client.g] || "execS") + (eng.office ? "_s" : "");
-  if (eng.office) { const v = STATIONS.exec; Object.assign(NPCS.exec, { x: v.x, z: v.z, rot: Math.PI, base: Math.PI }); uploadWorld({ palette: 0, bay: 18, stripe: "#c8372d", seed: 1, hq: hqCfg() }); }
-  else { Object.assign(NPCS.exec, { x: 30, z: 2.1, rot: 0, base: 0 }); uploadWorld({ palette: eng.palette, bay: eng.bay, stripe: eng.client.stripe, seed: eng.seed, logo: eng.client.name }); }
+  if (eng.office) { const v = STATIONS.exec, ex = WS_OF(curRank()) === "exec"; state.floor = ex ? "exec" : "main"; Object.assign(NPCS.exec, { x: v.x, z: v.z, rot: Math.PI, base: Math.PI, onExec: ex }); uploadWorld({ palette: 0, bay: 18, stripe: "#c8372d", seed: 1, hq: hqCfg(), floor: state.floor }); }
+  else { state.floor = "main"; Object.assign(NPCS.exec, { x: 30, z: 2.1, rot: 0, base: 0, onExec: false }); uploadWorld({ palette: eng.palette, bay: eng.bay, stripe: eng.client.stripe, seed: eng.seed, logo: eng.client.name }); }
   hqKey = ""; state.coffee = ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null;
   if (ENG.ev && ["offered", "call"].includes(ENG.ev.status)) ENG.ev.status = "waiting";
-  Object.assign(state.player, eng.office ? (STATIONS.pcdesk.room === "corner" ? { x: 45, z: 9.2, yaw: 0, pitch: 0 } : { x: 39, z: 9.0, yaw: 0, pitch: 0 }) : SPAWN); moved = 0; rebuildInter();
+  Object.assign(state.player, eng.office && FLOOR === "exec" ? EXEC_SPOTS.arrive : eng.office ? (STATIONS.pcdesk.room === "corner" ? { x: 45, z: 9.2, yaw: 0, pitch: 0 } : { x: 39, z: 9.0, yaw: 0, pitch: 0 }) : SPAWN); moved = 0; rebuildInter();
   state.ui = null; renderUI(); updatePrompt();
   toast(ENG.office ? (ENG.briefed ? "Back in your office." : `Today's client: ${ENG.client.name}. Hind has your briefing.`) : ENG.briefed ? `Back at ${ENG.client.name}.` : `Welcome to ${ENG.client.name}. Sara is waiting in the meeting room.`);
   if (ENG.office) for (const t of ENG.list) if (t.auto && !ENG.res[t.key]) delegate(t.key, t.auto);
   checkDelegated();
 }
-function leaveToHub() { storeEng(); ENG = null; useStations(BASE_STATIONS); Object.assign(NPCS.exec, { x: 30, z: 2.1, rot: 0, base: 0 }); state.coffee = null; ensureHQWorld(true); Object.assign(state.player, SPAWN); state.ui = "hub"; state.confirm = null; renderUI(); updatePrompt(); }
+function leaveToHub() { storeEng(); ENG = null; state.floor = "main"; useStations(BASE_STATIONS); Object.assign(NPCS.exec, { x: 30, z: 2.1, rot: 0, base: 0 }); state.coffee = null; ensureHQWorld(true); Object.assign(state.player, SPAWN); state.ui = "hub"; state.confirm = null; renderUI(); updatePrompt(); }
 function interact() {
   if (paused() || !near) return;
   const it = near;
@@ -435,6 +458,10 @@ function interact() {
   if (!ENG) {
     if (it.id === "myspace") { Audio.play("paper"); if (!state.hqSeen) { state.hqSeen = true; guideT = 0; } if (openDeal()) { state.dealQ = null; return openUI("inbox"); } return openUI("desk"); }
     if (it.id === "sara") { Audio.play("click"); toast(`Sara: "${hi("Ready for work")}? Pick your next job."`); return openUI("hub"); }
+    if (it.id === "lift") { if (curRank() < 5) { toast("🔒 The Executive Floor is for Senior Managers and above. Keep climbing!"); return; } return travelLift("exec"); }
+    if (it.id === "liftdown") return travelLift("main");
+    if (it.id === "coffeemeet") { if (coffeeLeft() <= 0) { toast("You've had two coffees with clients today. Come back tomorrow!"); return; } Audio.play("click"); return startChat("coffee"); }
+    if (it.id === "lunch") { if (lunchLeft() <= 0) { toast("You've already hosted lunch today."); return; } Audio.play("click"); return startChat("lunch"); }
     if (it.id === "boardtable") { if (boardReady()) { state.mgFrom = "hq"; Audio.play("knock"); return startBoard(); } toast("The board has already met today. Come back tomorrow!"); return; }
     if (it.id === "till") { state.mgFrom = "hq"; Audio.play("click"); return startTill(); }
     if (it.id === "ravi") { state.mgFrom = "hq"; Audio.play("click"); return startSort(); }

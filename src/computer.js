@@ -3,7 +3,7 @@
    and the task runs inside an app (spreadsheet with working formulas, email, or a PDF with a red pen). */
 const PC_STATIONS = new Set(["laptop", "mon1", "mon2", "dpc", "pcdesk"]);
 const SCREEN_AT = { laptop: [6, .93, 5.76], mon1: [15.34, 1.13, 7.37], mon2: [20.84, 1.13, 7.37], dpc: [34.2, 1.16, 20.62] };
-const screenAt = st => st === "pcdesk" ? (STATIONS.pcdesk && STATIONS.pcdesk.room === "corner" ? [45.3, 1.145, 4.533, -1] : [39.35, 1.135, 4.333, -1]) : SCREEN_AT[st];
+const screenAt = st => st === "pcdesk" ? (FLOOR === "exec" ? EXEC_SPOTS.screen : STATIONS.pcdesk && STATIONS.pcdesk.room === "corner" ? [45.3, 1.145, 4.533, -1] : [39.35, 1.135, 4.333, -1]) : SCREEN_AT[st];
 const isPC = tk => !!tk && tk.key !== "cap" && PC_STATIONS.has(tk.st) && ["calc", "mcq", "flag", "classify"].includes(tk.T.kind);
 const appOf = tk => tk.video ? "video" : tk.T.kind === "mcq" ? "email" : tk.T.kind === "flag" ? "pdf" : "sheet";
 

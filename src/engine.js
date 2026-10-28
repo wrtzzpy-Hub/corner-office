@@ -165,11 +165,13 @@ const PALETTES = [
   { meet: "#5a4652", fin: "#3f5464", wall: "#f3efe9", accent: "#c79a55", sign: "#3a2a36", rug: "#3a3250" },
   { meet: "#3f5240", fin: "#57534a", wall: "#efede6", accent: "#bfa05a", sign: "#2a3a2c", rug: "#5a3a24" }];
 let ROOMS = [];
-const roomKey = (x, z) => z < 12 ? (x < 12 ? "meet" : x < 24 ? "fin" : x < 36 ? "exec" : x < 42 ? "office" : "corner") : z < 16 ? "corr" : (x < 12 ? "lobby" : x < 36 ? "stock" : "cafe");
+const roomKey = (x, z) => FLOOR === "exec" ? execKey(x, z) : z < 12 ? (x < 12 ? "meet" : x < 24 ? "fin" : x < 36 ? "exec" : x < 42 ? "office" : "corner") : z < 16 ? "corr" : (x < 12 ? "lobby" : x < 36 ? "stock" : "cafe");
 const WORLD_W = 48;
 const roomAt = (x, z) => ROOMS.find(r => r.key === roomKey(x, z)) || ROOMS[0];
 
 function buildWorld(cfg) {
+  FLOOR = cfg.floor || "main"; DOORS = FLOOR === "exec" ? EXEC_DOORS : MAIN_DOORS; HUBS = FLOOR === "exec" ? { elobby: [8.3, 18.5] } : MAIN_HUBS;
+  if (FLOOR === "exec") return buildExecFloor(cfg);
   B = {}; CUR = B; colliders = []; walls2d = []; rng = 7 + (cfg.seed % 1000);
   const P = PALETTES[cfg.palette || 0];
   ROOMS = [
@@ -304,7 +306,7 @@ function buildWorld(cfg) {
 }
 
 /* ============================== EAST WING: OFFICES AND CAFÉ ============================== */
-const WS_OF = rk => rk === 0 ? "hot" : rk <= 2 ? "desk" : rk <= 5 ? "office" : "corner";
+const WS_OF = rk => rk === 0 ? "hot" : rk <= 2 ? "desk" : rk <= 4 ? "office" : "exec";
 const COWORKERS = [
   { id: "omar", name: "Omar", role: "Analyst", mesh: "cwA_s", x: 22.6, z: 11.0, rot: Math.PI },
   { id: "hind", name: "Hind", role: "Executive assistant", mesh: "cwG_s", x: 42.8, z: 12.45, rot: 0, senior: true },
@@ -321,7 +323,7 @@ const COWORKERS = [
 ];
 function activeCoworkers(cfg) {
   const hq = cfg.hq, ws = hq ? hq.ws : null;
-  return COWORKERS.filter(c => !(c.senior && !(hq && hq.rank >= 5)) && !(c.hqOnly && !hq) && !(c.clientOnly && hq) && !(c.notHQdesk && hq && (ws === "hot" || ws === "desk")) && !(c.office && hq && c.office === ws));
+  return COWORKERS.filter(c => !c.senior && !(c.hqOnly && !hq) && !(c.clientOnly && hq) && !(c.notHQdesk && hq && (ws === "hot" || ws === "desk")) && !(c.office && hq && c.office === ws));
 }
 let CW = [];
 function buildExtension(cfg, P) {
@@ -358,7 +360,8 @@ function buildExtension(cfg, P) {
     if (hq.rank >= 7) { cyl(44.1, .78, 4.6, .09, .05, "#c9a24a", { seg: 12 }); cyl(44.1, .83, 4.6, .03, .2, "#c9a24a", { seg: 8 }); sph(44.1, 1.1, 4.6, .12, "#f2df63", { em: .4, seg: 12, rings: 8 }); }
   }
   /* ---- your assistant's desk (Senior Manager and up) ---- */
-  if (hq && hq.rank >= 5) { desk(42.8, 13.05, 1.4, .6); monitor(43.1, .77, 13.2, "-z", "sheet"); box(42.4, .77, 13.0, .22, .06, .16, "#1b1b1f", { flat: true }); box(42.8, .775, 13.3, .5, .07, .05, "#c9a24a", { flat: true, em: .3 }); officeChair(42.8, 12.45, 1); }
+  /* private lift to the Executive Floor at the east end of the corridor */
+  box(47.9, 0, 14, .1, 2.5, 1.9, "#c9a24a", { tex: "metal", tile: .4, em: .25 }); box(47.86, 0, 14, .02, 2.5, .02, "#3a2a10", { flat: true }); box(47.88, 2.55, 14, .06, .25, 2.1, "#1b1b1f", { flat: true }); box(47.85, 2.6, 14, .02, .12, .5, "#f2df63", { em: 1, flat: true }); box(47.88, 1.2, 15.25, .04, .18, .12, "#c9a24a", { em: .6, flat: true });
   /* ---- café ---- */
   solid(44.8, 0, 22.7, 5.6, 1.0, .7, "#3a2a20", { tex: "wood", tile: .8 }); box(44.8, 1.0, 22.7, 5.8, .05, .85, "#ffffff", { tex: "marble", tile: 1 });
   solid(42.05, 0, 23.2, .1, 1.0, 1.6, "#3a2a20", { tex: "wood", tile: .8 });
@@ -375,7 +378,7 @@ function buildExtension(cfg, P) {
   for (const x of [38.4, 45.4]) { cyl(x, 2.55, x < 40 ? 20.2 : 18.8, .01, .65, "#222", { seg: 4 }); cyl(x, 2.4, x < 40 ? 20.2 : 18.8, .22, .16, "#c9a24a", { r2: .06, seg: 14, em: .5 }); }
   /* ---- your workspace on the Finance floor (HQ, Intern to Associate) ---- */
   if (mine("hot")) { box(15.3, .775, 10.4, .12, .005, .12, "#f2df63", { flat: true, em: .3 }); }
-  if (hq) buildDecor(hq);
+  if (hq && hq.ws !== "exec") buildDecor(hq);
   if (mine("desk")) {
     box(15, .775, 9.95, .5, .09, .05, hq.owned.includes("goldplate") ? "#d9b44a" : hq.color, { flat: true, em: .35 }); box(15, .79, 9.925, .42, .05, .01, "#fbfaf4", { flat: true, em: .3 });
     cyl(14.2, .775, 10.6, .1, .1, hq.color, { seg: 12 }); 
@@ -385,6 +388,7 @@ function buildExtension(cfg, P) {
 /* things bought in the shop, placed at your workspace */
 const DECOR_SLOTS = {
   desk: { top: .775, lamp: [16.0, 10.0], bull: [14.45, 10.05], cat: [15.3, 10.62], key: [15.6, 10.15] },
+  exec: { top: .81, lamp: [25.2, 4.05], bull: [22.9, 3.95], cat: [26.6, 6.6], key: [24.9, 4.1], fish: [29.55, 6.2, "x"], plant: [13.3, .9], coffee: [19.0, 9.45], neon: [12.13, 9.0, "+x"], arcade: [13.05, 9.3] },
   office: { top: .77, lamp: [40.0, 3.95], bull: [38.1, 3.95], cat: [40.3, 6.6], key: [39.7, 4.6], fish: [36.55, 9.6, "x"], plant: [37.4, 11.3], coffee: [36.6, 8.3], neon: [36.13, 9.6, "+x"], arcade: [36.75, 1.0] },
   corner: { top: .78, lamp: [46.15, 4.05], bull: [43.95, 4.0], cat: [43.8, 6.9], key: [45.9, 4.7], fish: [47.55, 6.6, "x"], plant: [43.1, 7.9], coffee: [47.6, 8.6], neon: [47.87, 6.6, "-x"], arcade: [47.35, 2.4] } };
 function buildDecor(hq) {
@@ -541,8 +545,10 @@ const trans = (x, y, z) => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
 const I4 = trans(0, 0, 0);
 
 /* ============================== NAVIGATION ============================== */
-const DOORS = { meet: { x: 6, in: [6, 10.9], out: [6, 13.6] }, fin: { x: 18, in: [18, 10.9], out: [18, 13.6] }, exec: { x: 30, in: [30, 10.9], out: [30, 13.6] }, office: { x: 39, in: [39, 10.9], out: [39, 14.3] }, corner: { x: 45, in: [45, 10.9], out: [45, 14.3] }, lobby: { x: 6, in: [6, 17.3], out: [6, 14.5] }, stock: { x: 22, in: [22, 17.8], out: [22, 14.5] }, cafe: { x: 41.5, in: [41.5, 17.3], out: [41.5, 14.5] } };
-const HUBS = { fin: [17.75, 6.2], meet: [10.6, 9.2], exec: [27.2, 8.6], stock: [24, 19.2] };
+let DOORS, HUBS;
+const MAIN_DOORS = { meet: { x: 6, in: [6, 10.9], out: [6, 13.6] }, fin: { x: 18, in: [18, 10.9], out: [18, 13.6] }, exec: { x: 30, in: [30, 10.9], out: [30, 13.6] }, office: { x: 39, in: [39, 10.9], out: [39, 14.3] }, corner: { x: 45, in: [45, 10.9], out: [45, 14.3] }, lobby: { x: 6, in: [6, 17.3], out: [6, 14.5] }, stock: { x: 22, in: [22, 17.8], out: [22, 14.5] }, cafe: { x: 41.5, in: [41.5, 17.3], out: [41.5, 14.5] } };
+const MAIN_HUBS = { fin: [17.75, 6.2], meet: [10.6, 9.2], exec: [27.2, 8.6], stock: [24, 19.2] };
+DOORS = MAIN_DOORS; HUBS = MAIN_HUBS;
 const blockedR = (x, z, r) => colliders.some(c => x > c[0] - r && x < c[2] + r && z > c[1] - r && z < c[3] + r);
 function segBlocked(a, b) { const d = Math.hypot(b[0] - a[0], b[1] - a[1]); for (let s = .4; s < d - .2; s += .1) { const t = s / d; if (blockedR(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, .3)) return true; } return false; }
 function pathTo(p, tg) {

@@ -414,6 +414,11 @@ td,th{color:inherit}
 .bcard.legendary{background:linear-gradient(135deg,#1b1a17,#3a3020 50%,#1b1a17);color:#f3dc94;box-shadow:0 4px 18px rgba(201,162,74,.55)}.bcard.legendary .rar,.bcard.legendary small,.bcard.legendary .bc-foot{color:#d9b44a;font-weight:700}
 .bcard.legendary::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,230,150,.25) 45%,transparent 60%);animation:holo 3s linear infinite}@keyframes holo{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 .bcard.lost{opacity:.5;filter:grayscale(.8)}.clientline.legend{background:#2a2418;color:#f3dc94}
+.liftfade{position:fixed;inset:0;z-index:60;background:#0b0d10;display:grid;place-items:center;animation:liftf 1.5s ease both;pointer-events:none}.liftfade div{text-align:center;color:#d9b44a;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em}.liftfade span{display:block;font-size:40px;animation:liftarr .6s ease-in-out infinite alternate}.liftfade b{font-size:28px}
+@keyframes liftf{0%{opacity:0}30%,70%{opacity:1}100%{opacity:0}}@keyframes liftarr{to{transform:translateY(-6px)}}
+.chat{max-width:720px;margin:0 auto}.bubble-l,.bubble-r{display:flex;gap:10px;align-items:flex-end;margin:10px 0}.bubble-r{justify-content:flex-end}.bubble-l .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-display);flex:none}
+.bubble-l p,.bubble-r p{margin:0;padding:10px 14px;border-radius:16px;max-width:460px;line-height:1.4}.bubble-l p{background:#fff;box-shadow:0 1px 0 var(--rule);border-bottom-left-radius:4px}.bubble-r p{background:#2f6db3;color:#fff;border-bottom-right-radius:4px}.bubble-l small{display:block;color:var(--ink-dim);font-size:12px;margin:0 0 3px 4px}
+.chat-note{margin:8px 0 12px;font-weight:600;color:var(--ink-dim)}.chat-note.good{color:var(--ok)}.chat-note.bad{color:var(--tick)}.crow.pickc{width:100%;border:0;cursor:pointer;text-align:left;font:inherit}.crow.pickc:hover{box-shadow:0 0 0 2px var(--hi)}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>

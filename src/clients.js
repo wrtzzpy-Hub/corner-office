@@ -16,6 +16,7 @@ for (const b of BADGES) BADGE[b.id] = b;
 function chooseClient(eng, h, r) {
   if (eng.daily) return;
   const act = activeClients();
+  if (save.nextClient && clientsMap()[save.nextClient] && clientsMap()[save.nextClient].status === "active") { const c = clientsMap()[save.nextClient], ind = INDUSTRIES[c.ind], ex = EXECS[c.ex]; save.nextClient = null; eng.client = { name: c.name, ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, stripe: ind.stripe, exec: ex[0], g: ex[1], role: eng.client.role }; eng.palette = c.palette; eng.returning = true; eng.legend = c.legend; return; }
   if (act.length >= 2 && r() < .45) {
     const pool = act.flatMap(c => Array(1 + Math.floor(c.trust / 25)).fill(c)), c = h.pick(pool), ind = INDUSTRIES[c.ind], ex = EXECS[c.ex];
     eng.client = { name: c.name, ind: ind.ind, prod: ind.prod, cost: ind.cost, per: ind.per, stripe: ind.stripe, exec: ex[0], g: ex[1], role: eng.client.role };
