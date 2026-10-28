@@ -90,7 +90,8 @@ const views = {
     <p>${{ hot: "Interns share the hot desk. Get promoted to <b>Analyst</b> and this desk becomes yours, with your name on it.", desk: `This is your own desk, with your nameplate in your colour.${hc.rank >= 2 ? " You've earned a plant and a photo frame too." : " At Associate you get a plant and a photo frame."}`, office: `Your own private office. Every promotion certificate hangs on the wall, and your badges sit on the trophy shelf.${hc.rank < 5 ? " More furniture arrives as you climb." : ""}`, corner: "The corner office: windows on two sides, the best view in the building, and a trophy cabinet for every badge." }[hc.ws]}</p>
     <div class="perks">${[["hot", "Intern", "Hot desk"], ["desk", "Analyst", "Your own desk"], ["office", "Senior Associate", "Private office"], ["corner", "Director", "Corner office"]].map(([w, r, t]) => `<div class="perk ${w === hc.ws ? "now" : ["hot", "desk", "office", "corner"].indexOf(w) < ["hot", "desk", "office", "corner"].indexOf(hc.ws) ? "past" : ""}"><b>${esc(t)}</b><small>${esc(r)}</small></div>`).join("")}</div>
     ${next ? `<p style="color:var(--ink-dim);font-size:14px">Next upgrade at <b>${RANKS[nextRank]}</b>.</p>` : ""}
-    <div class="row-btns"><button class="btn red" data-act="close">Back to the office</button><button class="btn plain" data-act="hub">Menu</button></div></article>`;
+    <p class="cashline">💰 ${A(save.cash)} · ${SHOP.filter(i => save.owned[i.id]).map(i => i.ic).join(" ") || "nothing bought yet"}</p>
+    <div class="row-btns"><button class="btn red" data-act="close">Back to the office</button><button class="btn plain" data-act="shop">Shop</button><button class="btn plain" data-act="hub">Menu</button></div></article>`;
   },
   ladder: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Career ladder</div><div class="label">${isStudent() ? "Student mode" : "Play for fun"}</div></div>${ladderHTML()}<button class="btn red" data-act="hub">Back</button></article>`,
   hub: () => {
@@ -113,6 +114,7 @@ const views = {
         ${conf ? `<div class="confirm paper" style="padding:12px"><p style="margin:0 0 8px">${conf === "reset" ? "Erase all progress in both modes? This can't be undone." : `Quit the current ${JOB()}? Its progress will be lost.`}</p><div class="row-btns"><button class="btn red" data-act="confirmyes">${conf === "reset" ? "Erase everything" : "Abandon it"}</button><button class="btn plain" data-act="confirmno" style="background:#fff">Cancel</button></div></div>` : ""}
         ${location.hash === "#dev" ? `<div class="paper devbox"><b>Tester tools</b><span>Jump to a rank to try its questions. Your next new ${JOB()} uses the new level.</span><div class="picks">${RANKS.map((n, i) => `<button class="pickb ${i === pr.rk ? "sel" : ""}" data-act="devrank" data-id="${i}">${n}</button>`).join("")}</div><button class="btn plain" data-act="deviv" style="margin-top:8px">Unlock the next interview</button></div>` : ""}
         ${curRank() >= 3 || dealsList().length ? `<button class="btn ${openDeal() ? "red glow" : "ghost"}" data-act="inbox"><span>📧 Inbox</span><small>${openDeal() ? "1 new message" : "deals between your clients"}</small></button>` : ""}
+        <button class="btn ghost" data-act="shop"><span>🛍️ Shop</span><small>${A(save.cash)}</small></button>
         <button class="btn ghost" data-act="clients"><span>Your clients</span><small>${activeClients().length} active</small></button>
         <button class="btn ghost" data-act="badges"><span>Badges</span><small>${Object.keys(save.badges).length}/${BADGES.length}</small></button>
         <button class="btn ghost" data-act="you"><span>Your profile</span><small>name and colour</small></button>
@@ -179,6 +181,7 @@ const views = {
     return `<article class="paper fadein"><div class="letterhead"><div class="co">${isStudent() ? "Engagement report" : "Job report"}</div><div class="label">${esc(rp.client)} · ${esc(rp.service)}</div></div>
       <div class="score-top"><div><span class="label">Score</span><div class="bigscore num" id="bigscore">0</div><span class="label">of ${N(rp.max)} · ${Math.round(rp.pct)}%</span><div class="stars">${stars(rp.pct)}</div></div>
       <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${[rp.daily ? "daily 1.5×" : "", rp.sb ? `🔥 streak +${rp.sb}%` : ""].filter(Boolean).join(" · ") || esc(RANKS[rp.after])}</small></div></div>
+      <p class="cashline">💰 <b>+${A(rp.cash)}</b> salary${rp.bonus ? " and bonus" : ""} · you have ${A(save.cash)}</p>
       ${clientReportHTML(rp.cu)}
       ${rp.deal ? `<p class="clientline">📧 <b>New message:</b> ${esc(rp.deal.a)} and ${esc(rp.deal.b)} want your help with a deal. Check your inbox.</p>` : ""}
       ${rp.bonus ? `<p class="bonusline">⭐ <b>Bonus +${rp.bonus}:</b> ${rp.bonusList.map(b => esc(b.label)).join(", ")}</p>` : ""}
@@ -191,6 +194,7 @@ const views = {
   },
   promo: () => { const rp = state.promo, iv = interviewer(rp.after); return `<article class="paper memo fadein"><div class="promo"><span class="label">Haddad &amp; Partners · Promotion</span><div class="big stamp-in">${esc(RANKS[rp.after])}</div>
     <div class="npc-line" style="justify-content:center"><div class="av" style="background:${iv.col}">${iv.av}</div></div>
+    <p class="cashline" style="justify-content:center">💰 Promotion bonus: <b>${A(rp.cash || 0)}</b></p>
     <p>"${hi("Congratulations")}! You got ${rp.right} out of 3 in your interview. You're our new ${RANKS[rp.after]}. From your next ${JOB()} you'll handle ${engLength(rp.after)} tasks${!isStudent() && funTier(rp.after) > funTier(rp.before) ? `, and the questions get a bit trickier (new question types unlocked)` : ""}. ${perkLine(rp.after)}"</p><span class="sig">${esc(iv.name)}</span>
     <button class="btn red" data-act="hub">Back to the firm</button></div></article>`; },
   interview: () => {
@@ -253,6 +257,11 @@ const views = {
       : `<div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="dealsubmit" ${q.sel === null ? "disabled" : ""}>Send my advice</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
+  shop: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">🛍️ Shop</div><div class="label">You have ${A(save.cash)}</div></div>
+    <p style="margin-top:0">Spend your salary on things for ${esc(WS_NAME[WS_OF(curRank())].toLowerCase())}. Everything you buy appears there when you walk around the office.</p>
+    <div class="shop">${SHOP.map(it => { const own = save.owned[it.id], lock = !canPlace(it), afford = save.cash >= it.price; return `<div class="sitem ${own ? "own" : ""}"><span class="bi">${it.ic}</span><b>${esc(it.name)}</b><small>${esc(it.blurb)}</small>${own ? `<span class="tagok">Owned ✓${lock ? " · shows in your office" : ""}</span>` : lock ? `<button class="btn plain" disabled>Needs your own office</button>` : `<button class="btn ${afford ? "red" : "plain"}" data-act="buy" data-id="${it.id}" ${afford ? "" : "disabled"}>${A(it.price)}</button>`}</div>`; }).join("")}</div>
+    <p style="color:var(--ink-dim);font-size:14px;margin-top:12px">You earn a salary after every ${JOB()} (more at higher ranks), plus bonuses from surprise events, deals and promotions.</p>
+    <div class="row-btns"><button class="btn red" data-act="hub">Back</button>${!ENG ? `<button class="btn plain" data-act="hq">See it in the office</button>` : ""}</div></article>`,
   badges: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Badges</div><div class="label">${Object.keys(save.badges).length} of ${BADGES.length} unlocked</div></div>
     <div class="badges">${BADGES.map(b => { const got = save.badges[b.id]; return `<div class="bdg ${got ? "got" : ""}"><span class="bi">${got ? b.ic : "🔒"}</span><b>${esc(b.name)}</b><small>${esc(b.how)}</small></div>`; }).join("")}</div>
     <p style="color:var(--ink-dim);font-size:14px;margin:12px 0">🔥 Best streak: <b>${save.streak.best}</b> day${save.streak.best === 1 ? "" : "s"}. Each day in a row adds +5% XP, up to +25%.</p>
@@ -321,6 +330,8 @@ document.addEventListener("click", e => {
     case "inbox": Audio.play("paper"); state.dealQ = null; state.ui = "inbox"; renderUI(); ov.scrollTop = 0; break;
     case "dealopt": if (state.dealQ && state.dealQ.picked === null) { state.dealQ.sel = +id; Audio.play("click"); renderUI(); } break;
     case "dealsubmit": if (state.dealQ && state.dealQ.sel !== null) answerDeal(state.dealQ.sel); break;
+    case "shop": Audio.play("paper"); state.ui = "shop"; renderUI(); ov.scrollTop = 0; break;
+    case "buy": { const it = SHOP.find(i => i.id === id); if (!it || save.owned[it.id] || save.cash < it.price || !canPlace(it)) break; save.cash -= it.price; save.owned[it.id] = today(); persist(); Audio.play("fanfare"); award("shopper"); if (it.id === "car") award("tycoon"); toast(`${it.ic} ${it.name} is yours!`); renderUI(); break; }
     case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
     case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
     case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }

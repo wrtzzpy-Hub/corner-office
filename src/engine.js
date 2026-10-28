@@ -57,6 +57,7 @@ function buildTextures() {
   });
   mkTex("menu", 512, 256, (g, w, h) => { g.fillStyle = "#1d2420"; g.fillRect(0, 0, w, h); speckle(g, w, h, 6000, .08, 1.5); g.fillStyle = "#f3ead6"; g.font = `bold 34px ${SERIF}`; g.textAlign = "center"; g.fillText("The Ledger Café", w / 2, 44); g.fillStyle = "#c9a24a"; g.fillRect(w / 2 - 120, 56, 240, 2); g.textAlign = "left"; g.font = `21px ${SANS}`;
     [["Karak chai", "8"], ["Flat white", "14"], ["Arabic coffee", "10"], ["Fresh juice", "16"], ["Date cake", "12"], ["Falafel wrap", "18"]].forEach(([n, pr], i) => { const y = 90 + i * 28; g.fillStyle = "#f3ead6"; g.fillText(n, 50, y); g.textAlign = "right"; g.fillStyle = "#e9c46a"; g.fillText("AED " + pr, w - 50, y); g.textAlign = "left"; }); });
+  mkTex("neon", 512, 128, (g, w, h) => { g.fillStyle = "#120a18"; g.fillRect(0, 0, w, h); g.font = `bold 72px ${SANS}`; g.textAlign = "center"; g.textBaseline = "middle"; g.shadowColor = "#ff4fd8"; g.shadowBlur = 28; g.fillStyle = "#ffd6f6"; for (let k = 0; k < 3; k++) g.fillText("THE BOSS", w / 2, h / 2 + 4); });
   mkTex("cert", 256, 256, (g, w, h) => { g.fillStyle = "#fbf7ec"; g.fillRect(0, 0, w, h); g.strokeStyle = "#c9a24a"; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20); g.fillStyle = "#1b2a40"; g.font = `bold 20px ${SERIF}`; g.textAlign = "center"; g.fillText("Certificate", w / 2, 78); g.font = `15px ${SERIF}`; g.fillText("of Promotion", w / 2, 104); g.fillStyle = "rgba(0,0,0,.25)"; for (let k = 0; k < 3; k++) g.fillRect(50, 130 + k * 18, w - 100, 3); g.fillStyle = "#c8372d"; g.beginPath(); g.arc(w / 2, 212, 16, 0, 7); g.fill(); });
   mkTex("skyline", 1024, 512, (g, w, h) => {
     const sky = g.createLinearGradient(0, 0, 0, h * .8); sky.addColorStop(0, "#081430"); sky.addColorStop(.45, "#1f3266"); sky.addColorStop(.75, "#a2546a"); sky.addColorStop(1, "#f0a35e"); g.fillStyle = sky; g.fillRect(0, 0, w, h);
@@ -371,11 +372,30 @@ function buildExtension(cfg, P) {
   for (const x of [38.4, 45.4]) { cyl(x, 2.55, x < 40 ? 20.2 : 18.8, .01, .65, "#222", { seg: 4 }); cyl(x, 2.4, x < 40 ? 20.2 : 18.8, .22, .16, "#c9a24a", { r2: .06, seg: 14, em: .5 }); }
   /* ---- your workspace on the Finance floor (HQ, Intern to Associate) ---- */
   if (mine("hot")) { box(15.3, .775, 10.4, .12, .005, .12, "#f2df63", { flat: true, em: .3 }); }
+  if (hq) buildDecor(hq);
   if (mine("desk")) {
-    box(15, .775, 9.95, .5, .09, .05, hq.color, { flat: true, em: .35 }); box(15, .79, 9.925, .42, .05, .01, "#fbfaf4", { flat: true, em: .3 });
+    box(15, .775, 9.95, .5, .09, .05, hq.owned.includes("goldplate") ? "#d9b44a" : hq.color, { flat: true, em: .35 }); box(15, .79, 9.925, .42, .05, .01, "#fbfaf4", { flat: true, em: .3 });
     cyl(14.2, .775, 10.6, .1, .1, hq.color, { seg: 12 }); 
     if (hq.rank >= 2) { cyl(15.8, .77, 10.6, .1, .14, "#2b2b2e", { seg: 10 }); sph(15.8, 1.0, 10.6, .15, "#ffffff", { tex: "leaves", seg: 10, rings: 6 }); box(14.0, .775, 10.15, .2, .16, .03, "#1b1b1f", { flat: true }); }
   }
+}
+/* things bought in the shop, placed at your workspace */
+const DECOR_SLOTS = {
+  desk: { top: .775, lamp: [16.0, 10.0], bull: [14.45, 10.05], cat: [15.3, 10.62], key: [15.6, 10.15] },
+  office: { top: .77, lamp: [40.0, 3.95], bull: [38.1, 3.95], cat: [40.3, 6.6], key: [39.7, 4.6], fish: [36.55, 9.6, "x"], plant: [37.4, 11.3], coffee: [36.6, 8.3], neon: [36.13, 9.6, "+x"], arcade: [36.75, 1.0] },
+  corner: { top: .78, lamp: [46.15, 4.05], bull: [43.95, 4.0], cat: [43.8, 6.9], key: [45.9, 4.7], fish: [47.55, 6.6, "x"], plant: [43.1, 7.9], coffee: [47.6, 8.6], neon: [47.87, 6.6, "-x"], arcade: [47.35, 2.4] } };
+function buildDecor(hq) {
+  const S = DECOR_SLOTS[hq.ws === "hot" ? "desk" : hq.ws], has = id => hq.owned.includes(id) && S[id] !== undefined, y = S.top;
+  if (has("lamp")) { const [x, z] = S.lamp; cyl(x, y, z, .08, .02, "#b8913a", { seg: 12 }); cyl(x, y + .02, z, .012, .38, "#b8913a", { seg: 6 }); cyl(x, y + .32, z, .13, .12, "#1f5a3a", { r2: .06, seg: 14, em: .1 }); cyl(x, y + .3, z, .1, .02, "#fff3c4", { seg: 12, em: 1 }); }
+  if (has("bull")) { const [x, z] = S.bull; box(x, y, z, .22, .04, .14, "#1b1b1f", { flat: true }); sph(x, y + .13, z, .09, "#d9b44a", { sx: 1.4, sy: .8, seg: 12, rings: 8, em: .2 }); sph(x + .12, y + .16, z, .045, "#d9b44a", { seg: 10, rings: 6, em: .2 }); [-1, 1].forEach(k => { cyl(x + .15, y + .19, z + k * .04, .01, .06, "#d9b44a", { seg: 5 }); [-1, 1].forEach(j => cyl(x + j * .07, y + .04, z + k * .04, .015, .07, "#d9b44a", { seg: 5 })); }); }
+  if (has("cat")) { const [x, z] = S.cat, cy = hq.ws === "desk" || hq.ws === "hot" ? y : 0, c = "#e08a3c"; sph(x, cy + .1, z, .13, c, { sx: 1.5, sy: .75, seg: 12, rings: 8 }); sph(x + .2, cy + .17, z, .085, c, { seg: 12, rings: 8 }); [-1, 1].forEach(k => { box(x + .2, cy + .23, z + k * .045, .03, .05, .03, c); sph(x + .275, cy + .18, z + k * .03, .012, "#1a1a1a", { seg: 6, rings: 4 }); }); cyl(x - .2, cy + .05, z + .06, .02, .02, c, { seg: 6 }); box(x - .27, cy + .03, z + .05, .16, .04, .04, c); }
+  if (has("key")) { const [x, z] = S.key; box(x, y, z, .06, .015, .03, "#c8372d", { flat: true, em: .3 }); cyl(x + .05, y, z, .02, .005, "#d9dde2", { seg: 8 }); }
+  if (hq.owned.includes("car")) { const [x, z] = S.key; box(x, y, z, .07, .018, .035, "#c8372d", { flat: true, em: .4 }); box(x + .06, y, z, .05, .008, .012, "#d9dde2", { flat: true }); }
+  if (has("fish")) { const [x, z] = S.fish; solid(x, 0, z, .5, .8, 1.6, "#2b2b2e", { tex: "wood", tile: .6 }); box(x, .8, z, .44, .5, 1.5, "#2a8fd8", { em: .45, flat: true }); box(x, .8, z, .46, .02, 1.52, "#d9c7a0", { flat: true }); const fs = x > 42 ? -1 : 1; for (let k = 0; k < 5; k++) box(x + fs * .225, .95 + (k % 3) * .1, z - .5 + k * .25, .02, .05, .12, ["#ff8c2a", "#ffd23f", "#ff4f6a"][k % 3], { em: .6, flat: true }); [-1, 1].forEach(k => sph(x, .82, z + k * .5, .07, "#3f9a6b", { seg: 8, rings: 5, sy: 2 })); const prev = CUR; CUR = G; box(x, .8, z, .48, .55, 1.54, "#cfe3ee", { flat: true }); CUR = prev; }
+  if (has("plant")) { const [x, z] = S.plant; cyl(x, 0, z, .34, .6, "#e9e4da", { r2: .3, seg: 16, solid: true }); [[0, 1.0, 0, .5], [.25, 1.45, .1, .42], [-.2, 1.6, -.15, .38], [.05, 1.95, .05, .32], [-.25, 1.2, .2, .3]].forEach(([dx, yy, dz, rr2]) => sph(x + dx, yy, z + dz, rr2, "#ffffff", { tex: "leaves", sy: 1.05, seg: 12, rings: 8 })); }
+  if (has("coffee")) { const [x, z] = S.coffee; solid(x, 0, z, .55, .9, .55, "#3a2a20", { tex: "wood", tile: .6 }); box(x, .9, z, .4, .42, .34, "#c4c8ce", { tex: "metal", tile: .3 }); box(x - .02, 1.12, z, .02, .12, .2, "#1b1b1f", { flat: true }); box(x, 1.3, z, .3, .02, .25, "#c8372d", { flat: true, em: .3 }); cyl(x + .05, .9, z + .12, .035, .07, "#ffffff", { seg: 8 }); }
+  if (has("neon")) { const [x, z, dir] = S.neon; panel("neon", x, 2.05, z, 1.4, .36, dir, 1); box(x + (dir === "+x" ? -.02 : .02), 2.02, z, .03, .42, 1.46, "#111", { flat: true }); }
+  if (has("arcade")) { const [x, z] = S.arcade; solid(x, 0, z, .7, 1.75, .6, "#3a1f5c", { tex: "metal", tile: .6 }); box(x, 1.75, z, .72, .25, .62, "#ff4fd8", { em: .7, flat: true }); box(x, 1.1, z, .6, .45, .62, "#0b0f14", { flat: true }); box(x, 1.15, z, .52, .36, .64, "#2ecc71", { em: .55, flat: true }); box(x, .85, z, .66, .08, .66, "#1b1b1f", { flat: true }); [-.15, .05, .2].forEach((d, i) => sph(x + d, .95, z, .03, ["#f2df63", "#c8372d", "#2f6db3"][i], { em: .6, seg: 8, rings: 5 })); }
 }
 function trophies(x, z, n, span = 2.6) {
   colliders.push([x - .2, z - span / 2, x + .2, z + span / 2]);

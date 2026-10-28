@@ -4,6 +4,23 @@ if (save.name === undefined) save.name = "";
 if (save.color === undefined) save.color = AV_COLORS[1];
 if (!save.streak) save.streak = { n: 0, last: "", best: 0 };
 if (!save.badges) save.badges = {};
+if (save.cash === undefined) save.cash = 0;
+if (!save.owned) save.owned = {};
+const SALARY = [150, 250, 400, 600, 900, 1300, 1800, 2500];
+const SHOP = [
+  { id: "lamp", ic: "💡", name: "Brass desk lamp", price: 300, where: "desk", blurb: "Warm light for late nights." },
+  { id: "goldplate", ic: "🏷️", name: "Gold nameplate", price: 800, where: "desk", blurb: "Your name, in gold." },
+  { id: "plant", ic: "🪴", name: "Giant monstera", price: 600, where: "office", blurb: "A big leafy plant for your office." },
+  { id: "coffee", ic: "☕", name: "Espresso machine", price: 1500, where: "office", blurb: "Your own coffee, no queue." },
+  { id: "neon", ic: "✨", name: "Neon sign", price: 1800, where: "office", blurb: "A glowing sign for your wall." },
+  { id: "bull", ic: "🐂", name: "Golden bull statue", price: 2000, where: "desk", blurb: "The symbol of a rising market." },
+  { id: "cat", ic: "🐈", name: "Office cat", price: 2500, where: "desk", blurb: "Naps on your desk. Mostly harmless." },
+  { id: "fish", ic: "🐠", name: "Fish tank", price: 3500, where: "office", blurb: "Calm, colourful, very executive." },
+  { id: "arcade", ic: "🕹️", name: "Arcade machine", price: 6000, where: "office", blurb: "For well-earned breaks." },
+  { id: "car", ic: "🏎️", name: "Supercar", price: 30000, where: "desk", blurb: "Parked downstairs. The keys sit on your desk." },
+];
+const canPlace = it => it.where === "desk" || curRank() >= 3;
+function earn(n, why) { save.cash = Math.round((save.cash || 0) + n); persist(); return n; }
 for (const m of ["casual", "student"]) { const c = save.careers[m]; if (c.rank === undefined) c.rank = rankOf(c.xp); }
 const curRank = () => career().rank;
 const myName = () => save.name || "";
@@ -38,6 +55,8 @@ const BADGES = [
   { id: "practice", ic: "🔁", name: "Practice makes perfect", how: "Get a practice round right" },
   { id: "eagle", ic: "🦅", name: "Eagle eye", how: "Count the stockroom right on the first try" },
   { id: "named", ic: "🪪", name: "Name badge", how: "Add your name to your profile" },
+  { id: "shopper", ic: "🛍️", name: "First purchase", how: "Buy something from the shop" },
+  { id: "tycoon", ic: "🏎️", name: "Tycoon", how: "Buy the supercar" },
 ];
 const BADGE = Object.fromEntries(BADGES.map(b => [b.id, b]));
 let badgeAt = 0;
@@ -93,10 +112,10 @@ function interviewNext() {
   if (iv.i < iv.qs.length) { Audio.play("paper"); return renderUI(); }
   iv.done = true; const c = career(), pass = iv.right >= 2;
   if (pass) {
-    const before = c.rank; c.rank = iv.target; c.ivWait = 0;
+    const before = c.rank; c.rank = iv.target; c.ivWait = 0; earn(iv.target * 500);
     award("promo"); if (iv.right === 3) award("ace"); if (c.failed) award("comeback"); c.failed = false;
     if (c.rank >= 4) award("manager"); if (c.rank === RANKS.length - 1) award("partner");
-    state.promo = { before, after: c.rank, right: iv.right };
+    state.promo = { before, after: c.rank, right: iv.right, cash: iv.target * 500 };
     persist(); Audio.play("promo"); state.ui = "promo"; renderUI();
   } else { c.ivWait = c.eng + 1; c.failed = true; persist(); Audio.play("bad"); renderUI(); }
 }

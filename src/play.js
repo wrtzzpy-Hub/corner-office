@@ -17,7 +17,7 @@ const state = { ui: save.onboarded ? "hub" : "ob0", obReturn: null, player: { ..
 
 /* ============================== HQ (walking around your own firm) ============================== */
 const hqWalk = () => !ENG && save.onboarded;
-const hqCfg = () => { const rank = curRank(); return { rank, ws: WS_OF(rank), color: save.color, name: myName(), badges: Object.keys(save.badges).length }; };
+const hqCfg = () => { const rank = curRank(); return { rank, ws: WS_OF(rank), color: save.color, name: myName(), badges: Object.keys(save.badges).length, owned: SHOP.filter(i => save.owned[i.id] && canPlace(i)).map(i => i.id) }; };
 let hqKey = "";
 function ensureHQWorld(force) {
   if (ENG || !prog) return;
@@ -496,5 +496,6 @@ function finishEngagement() {
   award("first"); if (pct >= 99.9) award("perfect"); if (noHint) award("nohint"); if (ENG.daily) award("daily");
   if (streak >= 3) award("streak3"); if (streak >= 7) award("streak7"); if (total >= 10) award("jobs10"); if (total >= 25) award("jobs25");
   state.report.deal = maybeNewDealMessage();
+  state.report.cash = earn(Math.round(SALARY[curRank()] * Math.min(100, pct) / 100) + bonus);
   save.cur[save.mode] = null; persist(); ENG.done = true; openUI("report");
 }
