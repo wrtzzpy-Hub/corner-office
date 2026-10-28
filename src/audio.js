@@ -25,6 +25,7 @@ const Audio = (() => {
     fanfare() { const t = ctx.currentTime; [523, 659, 784, 1047].forEach((f, i) => tone("triangle", f, t + i * .12, .01, .35, i === 3 ? .8 : .18)); },
     promo() { const t = ctx.currentTime; [392, 523, 659, 784, 1047, 1319].forEach((f, i) => { tone("triangle", f, t + i * .1, .01, .3, i === 5 ? 1.2 : .2); tone("sine", f / 2, t + i * .1, .01, .15, .3); }); },
     blip() { tone("sine", 1180, ctx.currentTime, .003, .08, .06); },
+    ring() { const t = ctx.currentTime; for (let k = 0; k < 2; k++) for (let i = 0; i < 8; i++) tone("square", i % 2 ? 1320 : 1100, t + k * .6 + i * .045, .002, .05, .04); },
     task() { const t = ctx.currentTime; [784, 988, 1319].forEach((f, i) => tone("triangle", f, t + i * .08, .005, .22, .25)); },
     box() { const t = ctx.currentTime; tone("sine", 110, t, .003, .5, .12, sfxBus, 60); burst(t, "bandpass", 700, 1.2, .35, .08, .1); },
     step(surface) {

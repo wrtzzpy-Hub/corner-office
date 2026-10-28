@@ -490,7 +490,8 @@ function initGL() {
   for (const [k, m] of Object.entries(MESH)) meshBufs[k] = Object.entries(m).map(([tex, a]) => ({ tex, ...upload(a) }));
   CUR = {}; cyl(0, 0, 0, .32, 3.1, "#f2df63", { seg: 20, noCap: true, em: 1 }); fxBufs.beam = upload(CUR.white);
   CUR = {}; sph(0, 0, 0, .14, "#f2df63", { seg: 4, rings: 2, sy: 1.5, em: 1 }); fxBufs.gem = upload(CUR.white);
-  CUR = {}; cyl(0, 0, 0, .55, .02, "#f2df63", { seg: 28, em: 1 }); fxBufs.ring = upload(CUR.white); CUR = B;
+  CUR = {}; cyl(0, 0, 0, .55, .02, "#f2df63", { seg: 28, em: 1 }); fxBufs.ring = upload(CUR.white);
+  CUR = {}; box(0, 0, 0, .2, .04, .12, "#5fd0ff", { em: .9, flat: true }); sph(0, .04, 0, .05, "#ffffff", { em: 1, seg: 8, rings: 5 }); fxBufs.item = upload(CUR.white); CUR = B;
   gl.enable(gl.DEPTH_TEST); gl.clearColor(.06, .09, .15, 1);
 }
 function uploadWorld(cfg) {

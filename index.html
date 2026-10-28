@@ -317,6 +317,9 @@ details .steps{margin:8px 0 6px}
 .perks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.perk{padding:10px;border-radius:8px;background:#efe9da;opacity:.65}.perk b{display:block;font-size:14px}.perk small{color:var(--ink-dim);font-size:12px}.perk.past{opacity:.9;background:#e4efe7}.perk.now{opacity:1;background:#fff;box-shadow:0 0 0 2px var(--tick)}
 @media (max-width:560px){.perks{grid-template-columns:repeat(2,1fr)}}
 #obj li.done{opacity:.6}
+.calltime{display:inline-block;min-width:44px;text-align:center;padding:3px 8px;border-radius:6px;background:var(--ink);color:#fff;font-weight:800;font-size:15px}.calltime.low{background:var(--tick);animation:glow 1s infinite}
+.callcard{border-top:6px solid var(--tick)}
+.bonusline{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:#fff6d6;color:#6b5410}
 </style>
 
 <canvas id="gl" aria-label="First-person view of the client's office"></canvas>
@@ -1707,7 +1710,8 @@ function initGL() {
   for (const [k, m] of Object.entries(MESH)) meshBufs[k] = Object.entries(m).map(([tex, a]) => ({ tex, ...upload(a) }));
   CUR = {}; cyl(0, 0, 0, .32, 3.1, "#f2df63", { seg: 20, noCap: true, em: 1 }); fxBufs.beam = upload(CUR.white);
   CUR = {}; sph(0, 0, 0, .14, "#f2df63", { seg: 4, rings: 2, sy: 1.5, em: 1 }); fxBufs.gem = upload(CUR.white);
-  CUR = {}; cyl(0, 0, 0, .55, .02, "#f2df63", { seg: 28, em: 1 }); fxBufs.ring = upload(CUR.white); CUR = B;
+  CUR = {}; cyl(0, 0, 0, .55, .02, "#f2df63", { seg: 28, em: 1 }); fxBufs.ring = upload(CUR.white);
+  CUR = {}; box(0, 0, 0, .2, .04, .12, "#5fd0ff", { em: .9, flat: true }); sph(0, .04, 0, .05, "#ffffff", { em: 1, seg: 8, rings: 5 }); fxBufs.item = upload(CUR.white); CUR = B;
   gl.enable(gl.DEPTH_TEST); gl.clearColor(.06, .09, .15, 1);
 }
 function uploadWorld(cfg) {
@@ -1805,6 +1809,7 @@ const Audio = (() => {
     fanfare() { const t = ctx.currentTime; [523, 659, 784, 1047].forEach((f, i) => tone("triangle", f, t + i * .12, .01, .35, i === 3 ? .8 : .18)); },
     promo() { const t = ctx.currentTime; [392, 523, 659, 784, 1047, 1319].forEach((f, i) => { tone("triangle", f, t + i * .1, .01, .3, i === 5 ? 1.2 : .2); tone("sine", f / 2, t + i * .1, .01, .15, .3); }); },
     blip() { tone("sine", 1180, ctx.currentTime, .003, .08, .06); },
+    ring() { const t = ctx.currentTime; for (let k = 0; k < 2; k++) for (let i = 0; i < 8; i++) tone("square", i % 2 ? 1320 : 1100, t + k * .6 + i * .045, .002, .05, .04); },
     task() { const t = ctx.currentTime; [784, 988, 1319].forEach((f, i) => tone("triangle", f, t + i * .08, .005, .22, .25)); },
     box() { const t = ctx.currentTime; tone("sine", 110, t, .003, .5, .12, sfxBus, 60); burst(t, "bandpass", 700, 1.2, .35, .08, .1); },
     step(surface) {
@@ -1907,6 +1912,7 @@ function rebuildInter() {
       INTER.push({ id, ...s, label, verb, station: true, done: !pend.length, title: (pend[0] || ts[0]).T.title });
     }
   }
+  if (ENG) eventInter();
   if (near) near = INTER.find(i => i.id === near.id) || null;
   syncTags(); guideT = 0;
 }
@@ -2028,6 +2034,7 @@ function pickGuide() {
   }
   if (state.coffee === "fetch") return interById("cw:hamza");
   if (state.coffee === "carry") return interById("sara");
+  if (evOf() && evOf().type === "lost" && evOf().status === "carry") return interById("mariam");
   if (!ENG.briefed || allTasksDone()) return interById("sara");
   let best = null, bd = 1e9;
   for (const it of INTER) if (it.station && !it.done) { const d = pathLen(pathTo(state.player, it)); if (d < bd) { bd = d; best = it; } }
@@ -2069,7 +2076,7 @@ let last = performance.now(), PV, pathGL = null;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; const t = now / 1000;
   update(dt); if ((ENG && !ENG.done) || hqWalk()) updateGuide(dt); else guide.it = null;
-  if (ENG && ["task", "overview", "note", "brief", "report", "promo"].includes(state.ui)) { requestAnimationFrame(frame); return; }
+  if (ENG && ["task", "overview", "note", "brief", "report", "promo", "event", "call", "interview", "badges"].includes(state.ui)) { requestAnimationFrame(frame); return; }
   const dpr = Math.min(2, devicePixelRatio || 1), w = Math.floor(cv.clientWidth * dpr), h = Math.floor(cv.clientHeight * dpr);
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   gl.viewport(0, 0, w, h); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -2093,6 +2100,8 @@ function frame(now) {
     gl.uniformMatrix4fv(loc.uM, false, mul(trans(n.x, Math.sin(t * 1.6 + n.x) * .006, n.z), rotY(n.rot)));
     for (const b of meshBufs[n.mesh]) drawBuf(b, .12);
   }
+  const lost = INTER.find(i => i.lost);
+  if (lost) { gl.uniformMatrix4fv(loc.uM, false, mul(trans(lost.x, lost.y - .25 + Math.sin(t * 3) * .03, lost.z), rotY(t * 1.2))); drawBuf({ tex: "white", ...fxBufs.item }, .5); }
   const it = guide.it && !paused() ? guide.it : null, far = it ? Math.min(1, Math.max(0, (Math.hypot(it.x - p.x, it.z - p.z) - 2.2) / 3)) : 0;
   if (it && far > .05) { gl.uniformMatrix4fv(loc.uM, false, mul(trans(it.x, it.y + .35 + Math.sin(t * 2.4) * .07, it.z), rotY(t * 1.8))); drawBuf({ tex: "white", ...fxBufs.gem }, 0); }
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
@@ -2166,7 +2175,7 @@ function drawGuideHud() {
   const dx = tx - p.x, dz = tz - p.z, fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
   const ang = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
   guideEl.querySelector(".arr").style.transform = `rotate(${ang}rad)`;
-  const what = it.id === "cw:hamza" ? "Pick up the coffee order at the café" : !ENG ? (it.verb === "Start your promotion interview" ? `Promotion interview with ${it.label.split(" · ")[0]}` : it.id === "myspace" ? `Visit ${WS_NAME[hqCfg().ws].toLowerCase()}` : "Talk to Sara to start a job") : state.coffee === "carry" && it.id === "sara" ? "Bring the coffees to Sara" : it.id === "sara" ? (!ENG.briefed ? "Get your briefing from Sara" : ENG.capT && !isDone("cap") ? "Give Sara your recommendation" : "Hand your report to Sara") : it.title;
+  const what = it.id === "mariam" ? `Return the ${LOST[evOf().spot].thing} to Mariam` : it.id === "cw:hamza" ? "Pick up the coffee order at the café" : !ENG ? (it.verb === "Start your promotion interview" ? `Promotion interview with ${it.label.split(" · ")[0]}` : it.id === "myspace" ? `Visit ${WS_NAME[hqCfg().ws].toLowerCase()}` : "Talk to Sara to start a job") : state.coffee === "carry" && it.id === "sara" ? "Bring the coffees to Sara" : it.id === "sara" ? (!ENG.briefed ? "Get your briefing from Sara" : ENG.capT && !isDone("cap") ? "Give Sara your recommendation" : "Hand your report to Sara") : it.title;
   const where = nearIt ? (isTouch ? "Tap the yellow button" : "Press E to start") : `${it.place} · ${Math.max(1, Math.round(guide.dist))} m`;
   const key = what + where + nearIt;
   if (key !== guideKey) { guideKey = key; guideEl.classList.toggle("here", nearIt); guideEl.querySelector("b").textContent = what; guideEl.querySelector("span").textContent = where; }
@@ -2209,6 +2218,7 @@ function renderHud() {
       const pend = ENG.list.filter(t => !isDone(t.key)).sort((a, b) => (b.st === g) - (a.st === g)), shown = pend.slice(0, 5);
       items = shown.map((t, i) => ({ t: t.T.title, s: "Go to " + STATIONS[t.st].place, cur: i === 0 && !allTasksDone() }));
       if (pend.length > shown.length) items.push({ t: `+ ${pend.length - shown.length} more (${isTouch ? "tap Tasks" : "press T"})`, s: "" });
+      const eo = eventObjective(); if (eo) items.unshift(eo);
       if (allTasksDone()) items.push({ t: ENG.capT && !isDone("cap") ? "Give Sara your recommendation" : "Hand your report to Sara", s: "Go to the meeting room", cur: true });
     }
     objEl.innerHTML = `<h4><span>${esc(ENG.client.name)}</span><span>${doneCount()}/${ENG.list.length} done</span></h4><ol>${items.map(i => `<li class="${i.cur ? "cur" : ""}"><span>${esc(i.t)}${i.s ? `<small>${esc(i.s)}</small>` : ""}</span></li>`).join("")}</ol>`;
@@ -2224,7 +2234,8 @@ function toast(msg) { const t = document.createElement("div"); t.className = "to
 /* ============================== FLOW ============================== */
 const MESH_FOR = { m: "execM", s: "execS", f: "execF" };
 function startEngagement(eng) {
-  materialize(eng); uploadWorld({ palette: eng.palette, bay: eng.bay, stripe: eng.client.stripe, seed: eng.seed, logo: eng.client.name }); hqKey = ""; state.coffee = null;
+  planEvent(eng); materialize(eng); ENG.ev = eng.ev; ENG.bonus = eng.bonus || []; uploadWorld({ palette: eng.palette, bay: eng.bay, stripe: eng.client.stripe, seed: eng.seed, logo: eng.client.name }); hqKey = ""; state.coffee = ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null;
+  if (ENG.ev && ["offered", "call"].includes(ENG.ev.status)) ENG.ev.status = "waiting";
   NPCS.exec.mesh = MESH_FOR[eng.client.g] || "execS";
   Object.assign(state.player, SPAWN); moved = 0; rebuildInter();
   state.ui = null; renderUI(); updatePrompt();
@@ -2234,6 +2245,7 @@ function leaveToHub() { storeEng(); ENG = null; state.coffee = null; ensureHQWor
 function interact() {
   if (paused() || !near) return;
   const it = near;
+  if (ENG && eventInteract(it)) return;
   if (it.id === "mariam") { Audio.play("click"); state.note = "mariam"; return openUI("note"); }
   if (it.verb === "Start your promotion interview") { Audio.play("knock"); state.iv = newInterview(); return openUI("interview"); }
   if (it.cw) {
@@ -2261,7 +2273,7 @@ function interact() {
 }
 function orderCoffee(c) {
   Audio.play("click");
-  if (state.coffee === "fetch") { state.coffee = "carry"; c.say = `Here you go${myName() ? ", " + myName() : ""}! Careful, it's hot.`; c.sayT = 3.6; toast("☕ Got the coffees. Take them to Sara in the meeting room."); guideT = 0; renderHud(); return; }
+  if (state.coffee === "fetch" && evOf()) { evOf().status = "carry"; syncEv(); rebuildInter(); c.say = `Here you go${myName() ? ", " + myName() : ""}! Careful, it's hot.`; c.sayT = 3.6; toast("☕ Got the coffees. Take them to Sara in the meeting room."); guideT = 0; renderHud(); return; }
   c.say = greetLine(c); c.sayT = 3.2; state.hadCoffee = true; toast(`☕ ${["Karak chai", "Flat white", "Arabic coffee", "Fresh mango juice"][Math.floor(Math.random() * 4)]}, on the house.`); if (!ENG) renderHud();
 }
 function openTask(key) { state.task = key; state.sel = null; state.picks = new Set(); state.cls = {}; state.msg = ""; state.hintOpen = false; state.mentor = ""; openUI("task"); }
@@ -2270,7 +2282,7 @@ function openUI(ui) {
   for (const k in keys) keys[k] = false; joy = null; stick.hidden = true;
   renderUI(); updatePrompt(); ov.scrollTop = 0;
 }
-function closeUI() { state.ui = null; renderUI(); rebuildInter(); updatePrompt(); }
+function closeUI() { state.ui = null; renderUI(); rebuildInter(); updatePrompt(); if (ENG && !ENG.done) maybeFireEvent(); }
 const taskByKey = k => k === "practice" ? state.practiceTask : k === "cap" ? ENG.capT : ENG.list[+k];
 function startPractice(fromKey) {
   const src = taskByKey(fromKey), sd = (Math.random() * 2 ** 31) | 0;
@@ -2309,16 +2321,107 @@ function submitTask() {
 function finishEngagement() {
   const items = [...ENG.list, ...(ENG.capT ? [ENG.capT] : [])];
   const score = items.reduce((s, t) => s + (ENG.res[t.key]?.pts || 0), 0), max = items.reduce((s, t) => s + ptsFor(t.tier), 0), pct = score / max * 100;
-  const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak);
-  const xp = Math.round(score * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
+  const newDay = bumpStreak(), streak = save.streak.n, sb = streakBonus(streak), bonus = (ENG.bonus || []).reduce((a, b) => a + b.pts, 0);
+  const xp = Math.round((score + bonus) * (ENG.daily ? 1.5 : 1) * (1 + sb / 100)), before = curRank(), wasReady = interviewEarned();
   const cr = career(); cr.xp += xp; cr.eng += 1; cr.sumPct += pct; cr.best = Math.max(cr.best, Math.round(pct));
   if (ENG.daily) save.daily[save.mode] = ENG.date;
   const after = curRank(), noHint = items.every(t => !ENG.res[t.key]?.hint);
-  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after, streak, sb, newDay, interview: interviewReady(), justEarned: !wasReady && interviewEarned() };
+  state.report = { client: ENG.client.name, service: ENG.service, daily: ENG.daily, items: items.map(t => ({ title: t.T.title, cap: t.key === "cap", pts: ENG.res[t.key]?.pts || 0, max: ptsFor(t.tier), explain: t.d.explain, hint: t.d.hint, frac: ENG.res[t.key]?.frac ?? 0 })), score, max, pct, xp, before, after, bonus, bonusList: ENG.bonus || [], streak, sb, newDay, interview: interviewReady(), justEarned: !wasReady && interviewEarned() };
   const total = save.careers.casual.eng + save.careers.student.eng;
   award("first"); if (pct >= 99.9) award("perfect"); if (noHint) award("nohint"); if (ENG.daily) award("daily");
   if (streak >= 3) award("streak3"); if (streak >= 7) award("streak7"); if (total >= 10) award("jobs10"); if (total >= 25) award("jobs25");
   save.cur[save.mode] = null; persist(); ENG.done = true; openUI("report");
+}
+/* ============================== SURPRISE EVENTS ==============================
+   One per job (most of the time): an urgent phone call, a lost item to return, or a coffee run. Each pays bonus points. */
+const LOST = [
+  { thing: "phone", x: 26.5, z: 15.45, y: .5, hint: "near the bench in the corridor" },
+  { thing: "car keys", x: 45.4, z: 18.8, y: .8, hint: "on a table in the café" },
+  { thing: "ID badge", x: 1, z: 10.9, y: .95, hint: "on the side cabinet in the meeting room" },
+  { thing: "wallet", x: 13.4, z: 19.4, y: .9, hint: "on the boxes near the Stockroom door" },
+  { thing: "sunglasses", x: 33.6, z: 10.2, y: .45, hint: "on the coffee table in the Executive suite" },
+  { thing: "notebook", x: 7.1, z: 21.9, y: .42, hint: "on the round table in the Lobby" },
+];
+const EV_BONUS = { call: 50, lost: 40, coffee: 30 };
+function planEvent(eng) {
+  if (eng.ev !== undefined) return;
+  const r = mul32(eng.seed + 4242), h = H(r);
+  if (eng.tasks.length < 4 || r() < .2) { eng.ev = null; return; }
+  const type = h.pick(["call", "lost", "coffee"]);
+  eng.ev = { type, at: 1 + Math.floor(r() * Math.min(3, eng.tasks.length - 2)), status: "waiting", spot: type === "lost" ? Math.floor(r() * LOST.length) : 0 };
+}
+const evOf = () => ENG && ENG.ev;
+function bonusAdd(label, pts) { ENG.bonus = ENG.bonus || []; ENG.bonus.push({ label, pts }); const e = save.cur[save.mode]; if (e) e.bonus = ENG.bonus; }
+function syncEv() { const e = save.cur[save.mode]; if (e && ENG) { e.ev = ENG.ev; e.bonus = ENG.bonus; } persist(); state.coffee = ENG && ENG.ev && ENG.ev.type === "coffee" && ["fetch", "carry"].includes(ENG.ev.status) ? ENG.ev.status : null; }
+function maybeFireEvent() {
+  const ev = evOf(); if (!ev || ev.status !== "waiting" || !ENG.briefed || doneCount() < ev.at || allTasksDone()) return false;
+  ev.status = "offered"; syncEv();
+  if (ev.type === "call") { Audio.play("ring"); setTimeout(() => Audio.play("ring"), 1300); }
+  else Audio.play("blip");
+  openUI("event"); return true;
+}
+function eventCard() {
+  const ev = evOf(), c = ENG.client, lost = LOST[ev.spot];
+  if (ev.type === "call") return { who: c.exec, role: c.role, av: c.exec[0], col: "#1c2633", h: "📞 Urgent call!", body: `"${hi("Hello")}! It's ${esc(firstName(c.exec))}. I've got a quick question and I need an answer in the next 30 seconds."`, yes: "Answer the phone", no: "Let it ring", bonus: EV_BONUS.call };
+  if (ev.type === "lost") return { who: "Mariam", role: "Reception", av: "M", col: "#5a4a30", h: `A visitor lost their ${lost.thing}`, body: `"${hi("Excuse me")}! A visitor left their <b>${lost.thing}</b> somewhere. They think it's ${lost.hint}. Could you find it and bring it to me at reception?"`, yes: "I'll look for it", no: "Not now", bonus: EV_BONUS.lost };
+  return { who: "Sara", role: bossTitle(), av: "S", col: "#2f3a4c", h: "Coffee run?", body: `"I'm buried in work${myName() ? ", " + esc(myName()) : ""}. Could you pick up the team's coffee order from the café at the east end and bring it to me in the meeting room?"`, yes: "Sure!", no: "Not now", bonus: EV_BONUS.coffee };
+}
+function acceptEvent() {
+  const ev = evOf(); if (!ev) return;
+  if (ev.type === "call") { ev.status = "call"; syncEv(); state.call = makeCall(); Audio.play("click"); openUI("call"); startCallTimer(); return; }
+  ev.status = ev.type === "lost" ? "search" : "fetch"; syncEv(); Audio.play("stamp"); closeUI(); guideT = 0;
+  toast(ev.type === "lost" ? `Find the ${LOST[ev.spot].thing}: ${LOST[ev.spot].hint}.` : "Head to the café at the east end of the corridor.");
+}
+function declineEvent() { const ev = evOf(); if (ev) { ev.status = "declined"; syncEv(); } Audio.play("paper"); closeUI(); }
+
+/* ---------- urgent call ---------- */
+function makeCall() {
+  const seed = (Math.random() * 2 ** 31) | 0, r = mul32(seed), h = H(r);
+  let pool;
+  if (isStudent()) { const tier = baseTier(); pool = TEMPLATES.filter(t => !t.cap && (t.kind === "mcq" || t.kind === "calc") && t.min <= tier && t.max >= tier - 1 && t.major === save.major).map(t => [t, Math.max(t.min, Math.min(t.max, tier))]); if (pool.length < 2) pool = TEMPLATES.filter(t => !t.cap && (t.kind === "mcq" || t.kind === "calc") && t.min <= tier).map(t => [t, Math.max(t.min, Math.min(t.max, tier))]); }
+  else { const ft = funTier(curRank()); pool = FUN.filter(t => (t.kind === "mcq" || t.kind === "calc") && t.min <= ft).map(t => [t, Math.max(t.min, ft)]); }
+  const [t, tier] = h.pick(pool), d = t.gen(mul32(seed + 3), tier, ctxOf(ENG));
+  const opts = t.kind === "calc" ? numChoices(d, seed + 5) : { options: d.options, correct: d.correct };
+  return { title: t.title, brief: d.brief, table: d.table, facts: d.facts, q: d.q, options: opts.options, correct: opts.correct, explain: d.explain, end: performance.now() + 30000, sel: null, picked: null, timedOut: false };
+}
+let callTimer = null;
+function startCallTimer() {
+  clearInterval(callTimer);
+  callTimer = setInterval(() => {
+    const c = state.call; if (!c || c.picked !== null || state.ui !== "call") { clearInterval(callTimer); return; }
+    const left = Math.max(0, Math.ceil((c.end - performance.now()) / 1000)), el = document.getElementById("calltime");
+    if (el) { el.textContent = left + "s"; el.classList.toggle("low", left <= 10); }
+    if (left <= 0) { c.timedOut = true; finishCall(-1); }
+  }, 250);
+}
+function finishCall(choice) {
+  const c = state.call, ev = evOf(); if (!c || c.picked !== null) return;
+  clearInterval(callTimer); c.picked = choice; const ok = choice === c.correct;
+  ev.status = ok ? "won" : "lost"; if (ok) bonusAdd("Urgent call", EV_BONUS.call); syncEv();
+  Audio.play(ok ? "good" : "bad"); renderUI();
+}
+
+/* ---------- lost item and coffee ---------- */
+function eventInter() {
+  const ev = evOf(); if (!ev) return;
+  if (ev.type === "lost" && ev.status === "search") { const L = LOST[ev.spot]; INTER.push({ id: "lost", x: L.x, z: L.z, y: L.y + .35, ap: [L.x, L.z], room: roomKey(L.x, L.z), reach: 2.4, label: `Lost ${L.thing}`, verb: `Pick up the ${L.thing}`, fixed: true, lost: true, place: L.hint }); }
+  if (ev.type === "lost" && ev.status === "carry") { const m = INTER.find(i => i.id === "mariam"); if (m) m.verb = `Return the ${LOST[ev.spot].thing}`; }
+  if (ev.type === "coffee" && ev.status === "carry") { const s = INTER.find(i => i.id === "sara"); if (s) s.verb = "Give Sara the coffees"; }
+}
+function eventInteract(it) {
+  const ev = evOf(); if (!ev) return false;
+  if (it.id === "lost" && ev.status === "search") { ev.status = "carry"; syncEv(); Audio.play("task"); toast(`Found the ${LOST[ev.spot].thing}! Take it to Mariam at reception.`); rebuildInter(); guideT = 0; return true; }
+  if (it.id === "mariam" && ev.type === "lost" && ev.status === "carry") { ev.status = "won"; bonusAdd(`Returned the ${LOST[ev.spot].thing}`, EV_BONUS.lost); syncEv(); Audio.play("fanfare"); toast(`Mariam: "Thank you so much! You're a star." +${EV_BONUS.lost} bonus`); rebuildInter(); guideT = 0; return true; }
+  if (it.id === "sara" && ev.type === "coffee" && ev.status === "carry") { ev.status = "won"; bonusAdd("Coffee run", EV_BONUS.coffee); syncEv(); Audio.play("fanfare"); toast(`Sara: "You're a lifesaver!" +${EV_BONUS.coffee} bonus`); rebuildInter(); guideT = 0; return true; }
+  return false;
+}
+function eventObjective() {
+  const ev = evOf(); if (!ev) return null;
+  if (ev.type === "lost" && ev.status === "search") return { t: `Bonus: find the lost ${LOST[ev.spot].thing}`, s: `Try ${LOST[ev.spot].hint}` };
+  if (ev.type === "lost" && ev.status === "carry") return { t: `Bonus: return the ${LOST[ev.spot].thing}`, s: "Mariam at reception", cur: true };
+  if (ev.type === "coffee" && ev.status === "fetch") return { t: "Bonus: pick up the coffees", s: "The café, east end", cur: true };
+  if (ev.type === "coffee" && ev.status === "carry") return { t: "Bonus: bring the coffees to Sara", s: "Meeting room", cur: true };
+  return null;
 }
 /* ============================== CALCULATOR ==============================
    A small on-screen calculator for task screens. Parses the expression itself (no eval). */
@@ -2552,6 +2655,7 @@ const views = {
     return `<article class="paper fadein"><div class="letterhead"><div class="co">${isStudent() ? "Engagement report" : "Job report"}</div><div class="label">${esc(rp.client)} · ${esc(rp.service)}</div></div>
       <div class="score-top"><div><span class="label">Score</span><div class="bigscore num" id="bigscore">0</div><span class="label">of ${N(rp.max)} · ${Math.round(rp.pct)}%</span><div class="stars">${stars(rp.pct)}</div></div>
       <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${[rp.daily ? "daily 1.5×" : "", rp.sb ? `🔥 streak +${rp.sb}%` : ""].filter(Boolean).join(" · ") || esc(RANKS[rp.after])}</small></div></div>
+      ${rp.bonus ? `<p class="bonusline">⭐ <b>Bonus +${rp.bonus}:</b> ${rp.bonusList.map(b => esc(b.label)).join(", ")}</p>` : ""}
       ${rp.newDay ? `<p class="streakline">🔥 <b>${rp.streak}-day streak!</b> ${rp.streak > 1 ? `Play tomorrow to keep it going${rp.sb < 25 ? ` and raise your bonus to +${streakBonus(rp.streak + 1)}%` : ""}.` : "Come back tomorrow to start a streak and earn bonus XP."}</p>` : ""}
       ${rp.interview ? `<div class="ivcta"><b>${rp.justEarned ? "You've earned a promotion interview!" : "Your promotion interview is waiting."}</b><span>${esc(interviewer(rp.after + 1).name)} wants to see you about becoming <b>${RANKS[rp.after + 1]}</b>. Get 2 of 3 questions right to be promoted.</span></div>` : ""}
       <h3 class="section-h">Task by task</h3><p style="margin:-4px 0 10px;color:var(--ink-dim);font-size:14px">Tap a task to see how it's solved.</p>
@@ -2582,6 +2686,23 @@ const views = {
       : `<p class="instr">One try per question. Use the calculator if you need it.</p><div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="ivsubmit" ${iv.sel === null ? "disabled" : ""}>Lock in</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
+  event: () => { const e = eventCard(); return `<article class="paper memo fadein"><div class="letterhead"><div class="co">Surprise!</div><div class="label">Bonus +${e.bonus} pts</div></div>
+    <div class="npc-line"><div class="av" style="background:${e.col}">${esc(e.av)}</div><div><b>${esc(e.who)}</b><small style="display:block;color:var(--ink-dim)">${esc(e.role)}</small><h2 style="margin-top:6px">${e.h}</h2><p>${e.body}</p></div></div>
+    <div class="row-btns"><button class="btn red" data-act="evyes">${esc(e.yes)}</button><button class="btn plain" data-act="evno">${esc(e.no)}</button></div></article>`; },
+  call: () => {
+    const c = state.call, ans = c.picked !== null, ok = c.picked === c.correct, cl = ENG.client;
+    return `<section class="fadein"><article class="paper callcard">
+      <div class="letterhead"><div class="co">📞 ${esc(cl.exec)} on the line</div><div class="label">${ans ? (ok ? `+${EV_BONUS.call} bonus` : "No bonus") : `<span id="calltime" class="calltime">${Math.max(0, Math.ceil((c.end - performance.now()) / 1000))}s</span>`}</div></div>
+      <p class="brief">${c.brief}</p>
+      ${c.facts ? `<div class="facts">${c.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}
+      ${c.table ? tableHTML(c.table, false, false, new Set(), null) : ""}
+      <p class="q">${esc(c.q)}</p>
+      <div class="choices">${c.options.map((o, i) => ans ? `<div class="choice ${i === c.correct ? "right" : i === c.picked ? "wrong" : "dim"}"><b>${i === c.correct ? "✓ " : i === c.picked ? "✗ " : ""}${esc(o)}</b></div>` : `<button class="choice ${c.sel === i ? "sel" : ""}" data-act="callopt" data-id="${i}"><b>${esc(o)}</b></button>`).join("")}</div>
+      ${ans ? `<div class="result ${ok ? "good" : "bad"}"><div class="res-h"><b class="t">${ok ? "✓ Great answer!" : c.timedOut ? "⏱ Out of time" : "✗ Not quite"}</b><span class="pts">${ok ? "+" + EV_BONUS.call + " bonus" : ""}</span></div><div class="howto"><ol>${stepsOf(c.explain).map(x => `<li>${x}</li>`).join("")}</ol></div></div>
+        <div class="row-btns" style="margin-top:14px"><button class="btn red" data-act="close">${ok ? `"Thanks! That's exactly what I needed."` : "Back to work"}</button></div>`
+      : `<div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="callsubmit" ${c.sel === null ? "disabled" : ""}>Answer</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
+    </article></section>`;
+  },
   badges: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Badges</div><div class="label">${Object.keys(save.badges).length} of ${BADGES.length} unlocked</div></div>
     <div class="badges">${BADGES.map(b => { const got = save.badges[b.id]; return `<div class="bdg ${got ? "got" : ""}"><span class="bi">${got ? b.ic : "🔒"}</span><b>${esc(b.name)}</b><small>${esc(b.how)}</small></div>`; }).join("")}</div>
     <p style="color:var(--ink-dim);font-size:14px;margin:12px 0">🔥 Best streak: <b>${save.streak.best}</b> day${save.streak.best === 1 ? "" : "s"}. Each day in a row adds +5% XP, up to +25%.</p>
@@ -2600,12 +2721,12 @@ function ladderHTML() { const rk = curRank(); return `<div class="ladder">${RANK
 function renderUI() {
   if (!ENG) ensureHQWorld();
   renderHud();
-  if (state.ui !== "task" && state.ui !== "interview" && calc.open) toggleCalc(false);
+  if (!["task", "interview", "call"].includes(state.ui) && calc.open) toggleCalc(false);
   if (!state.ui) { ov.hidden = true; ov.innerHTML = ""; return; }
   ov.hidden = false; ov.innerHTML = `<div class="ov-inner">${views[state.ui]()}</div>`;
   if (state.ui === "report") countUp();
   if (state.ui === "task") { const a = document.getElementById("ans"); if (a && !isTouch && !calc.open) a.focus({ preventScroll: true }); }
-  if (state.ui !== "task" && state.ui !== "interview" && calc.open) toggleCalc(false); else renderCalc();
+  if (!["task", "interview", "call"].includes(state.ui) && calc.open) toggleCalc(false); else renderCalc();
 }
 function countUp() {
   const target = state.report.score, el = document.getElementById("bigscore"), t0 = performance.now();
@@ -2642,6 +2763,10 @@ document.addEventListener("click", e => {
     case "ivsubmit": interviewAnswer(); break;
     case "ivnext": interviewNext(); ov.scrollTop = 0; break;
     case "hq": Audio.play("stamp"); state.ui = null; state.confirm = null; renderUI(); updatePrompt(); toast(state.hqSeen ? "Back at Haddad & Partners." : `Follow the arrow to ${WS_NAME[hqCfg().ws].toLowerCase()}.`); break;
+    case "evyes": acceptEvent(); break;
+    case "evno": declineEvent(); break;
+    case "callopt": if (state.call && state.call.picked === null) { state.call.sel = +id; Audio.play("click"); renderUI(); startCallTimer(); } break;
+    case "callsubmit": if (state.call && state.call.sel !== null) finishCall(state.call.sel); break;
     case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
     case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
     case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }

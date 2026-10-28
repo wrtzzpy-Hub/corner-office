@@ -176,6 +176,7 @@ const views = {
     return `<article class="paper fadein"><div class="letterhead"><div class="co">${isStudent() ? "Engagement report" : "Job report"}</div><div class="label">${esc(rp.client)} · ${esc(rp.service)}</div></div>
       <div class="score-top"><div><span class="label">Score</span><div class="bigscore num" id="bigscore">0</div><span class="label">of ${N(rp.max)} · ${Math.round(rp.pct)}%</span><div class="stars">${stars(rp.pct)}</div></div>
       <div class="rank stamp-in" style="animation-delay:1.1s">+${N(rp.xp)} XP<small>${[rp.daily ? "daily 1.5×" : "", rp.sb ? `🔥 streak +${rp.sb}%` : ""].filter(Boolean).join(" · ") || esc(RANKS[rp.after])}</small></div></div>
+      ${rp.bonus ? `<p class="bonusline">⭐ <b>Bonus +${rp.bonus}:</b> ${rp.bonusList.map(b => esc(b.label)).join(", ")}</p>` : ""}
       ${rp.newDay ? `<p class="streakline">🔥 <b>${rp.streak}-day streak!</b> ${rp.streak > 1 ? `Play tomorrow to keep it going${rp.sb < 25 ? ` and raise your bonus to +${streakBonus(rp.streak + 1)}%` : ""}.` : "Come back tomorrow to start a streak and earn bonus XP."}</p>` : ""}
       ${rp.interview ? `<div class="ivcta"><b>${rp.justEarned ? "You've earned a promotion interview!" : "Your promotion interview is waiting."}</b><span>${esc(interviewer(rp.after + 1).name)} wants to see you about becoming <b>${RANKS[rp.after + 1]}</b>. Get 2 of 3 questions right to be promoted.</span></div>` : ""}
       <h3 class="section-h">Task by task</h3><p style="margin:-4px 0 10px;color:var(--ink-dim);font-size:14px">Tap a task to see how it's solved.</p>
@@ -206,6 +207,23 @@ const views = {
       : `<p class="instr">One try per question. Use the calculator if you need it.</p><div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="ivsubmit" ${iv.sel === null ? "disabled" : ""}>Lock in</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
     </article></section>`;
   },
+  event: () => { const e = eventCard(); return `<article class="paper memo fadein"><div class="letterhead"><div class="co">Surprise!</div><div class="label">Bonus +${e.bonus} pts</div></div>
+    <div class="npc-line"><div class="av" style="background:${e.col}">${esc(e.av)}</div><div><b>${esc(e.who)}</b><small style="display:block;color:var(--ink-dim)">${esc(e.role)}</small><h2 style="margin-top:6px">${e.h}</h2><p>${e.body}</p></div></div>
+    <div class="row-btns"><button class="btn red" data-act="evyes">${esc(e.yes)}</button><button class="btn plain" data-act="evno">${esc(e.no)}</button></div></article>`; },
+  call: () => {
+    const c = state.call, ans = c.picked !== null, ok = c.picked === c.correct, cl = ENG.client;
+    return `<section class="fadein"><article class="paper callcard">
+      <div class="letterhead"><div class="co">📞 ${esc(cl.exec)} on the line</div><div class="label">${ans ? (ok ? `+${EV_BONUS.call} bonus` : "No bonus") : `<span id="calltime" class="calltime">${Math.max(0, Math.ceil((c.end - performance.now()) / 1000))}s</span>`}</div></div>
+      <p class="brief">${c.brief}</p>
+      ${c.facts ? `<div class="facts">${c.facts.map(f => `<div class="fact"><div class="v">${esc(f[1])}</div><div class="k">${esc(f[0])}</div></div>`).join("")}</div>` : ""}
+      ${c.table ? tableHTML(c.table, false, false, new Set(), null) : ""}
+      <p class="q">${esc(c.q)}</p>
+      <div class="choices">${c.options.map((o, i) => ans ? `<div class="choice ${i === c.correct ? "right" : i === c.picked ? "wrong" : "dim"}"><b>${i === c.correct ? "✓ " : i === c.picked ? "✗ " : ""}${esc(o)}</b></div>` : `<button class="choice ${c.sel === i ? "sel" : ""}" data-act="callopt" data-id="${i}"><b>${esc(o)}</b></button>`).join("")}</div>
+      ${ans ? `<div class="result ${ok ? "good" : "bad"}"><div class="res-h"><b class="t">${ok ? "✓ Great answer!" : c.timedOut ? "⏱ Out of time" : "✗ Not quite"}</b><span class="pts">${ok ? "+" + EV_BONUS.call + " bonus" : ""}</span></div><div class="howto"><ol>${stepsOf(c.explain).map(x => `<li>${x}</li>`).join("")}</ol></div></div>
+        <div class="row-btns" style="margin-top:14px"><button class="btn red" data-act="close">${ok ? `"Thanks! That's exactly what I needed."` : "Back to work"}</button></div>`
+      : `<div class="row-btns" style="margin-top:12px"><button class="btn red" data-act="callsubmit" ${c.sel === null ? "disabled" : ""}>Answer</button><button class="btn ghost calc-btn" data-act="calc" aria-pressed="${calc.open}" style="color:var(--ink)">Calculator</button></div>`}
+    </article></section>`;
+  },
   badges: () => `<article class="paper memo fadein"><div class="letterhead"><div class="co">Badges</div><div class="label">${Object.keys(save.badges).length} of ${BADGES.length} unlocked</div></div>
     <div class="badges">${BADGES.map(b => { const got = save.badges[b.id]; return `<div class="bdg ${got ? "got" : ""}"><span class="bi">${got ? b.ic : "🔒"}</span><b>${esc(b.name)}</b><small>${esc(b.how)}</small></div>`; }).join("")}</div>
     <p style="color:var(--ink-dim);font-size:14px;margin:12px 0">🔥 Best streak: <b>${save.streak.best}</b> day${save.streak.best === 1 ? "" : "s"}. Each day in a row adds +5% XP, up to +25%.</p>
@@ -224,12 +242,12 @@ function ladderHTML() { const rk = curRank(); return `<div class="ladder">${RANK
 function renderUI() {
   if (!ENG) ensureHQWorld();
   renderHud();
-  if (state.ui !== "task" && state.ui !== "interview" && calc.open) toggleCalc(false);
+  if (!["task", "interview", "call"].includes(state.ui) && calc.open) toggleCalc(false);
   if (!state.ui) { ov.hidden = true; ov.innerHTML = ""; return; }
   ov.hidden = false; ov.innerHTML = `<div class="ov-inner">${views[state.ui]()}</div>`;
   if (state.ui === "report") countUp();
   if (state.ui === "task") { const a = document.getElementById("ans"); if (a && !isTouch && !calc.open) a.focus({ preventScroll: true }); }
-  if (state.ui !== "task" && state.ui !== "interview" && calc.open) toggleCalc(false); else renderCalc();
+  if (!["task", "interview", "call"].includes(state.ui) && calc.open) toggleCalc(false); else renderCalc();
 }
 function countUp() {
   const target = state.report.score, el = document.getElementById("bigscore"), t0 = performance.now();
@@ -266,6 +284,10 @@ document.addEventListener("click", e => {
     case "ivsubmit": interviewAnswer(); break;
     case "ivnext": interviewNext(); ov.scrollTop = 0; break;
     case "hq": Audio.play("stamp"); state.ui = null; state.confirm = null; renderUI(); updatePrompt(); toast(state.hqSeen ? "Back at Haddad & Partners." : `Follow the arrow to ${WS_NAME[hqCfg().ws].toLowerCase()}.`); break;
+    case "evyes": acceptEvent(); break;
+    case "evno": declineEvent(); break;
+    case "callopt": if (state.call && state.call.picked === null) { state.call.sel = +id; Audio.play("click"); renderUI(); startCallTimer(); } break;
+    case "callsubmit": if (state.call && state.call.sel !== null) finishCall(state.call.sel); break;
     case "badges": Audio.play("paper"); state.ui = "badges"; renderUI(); break;
     case "you": Audio.play("paper"); state.ui = "you"; renderUI(); break;
     case "color": { const nm = document.getElementById("yourname"); if (nm) save.name = nm.value.trim().slice(0, 16); save.color = id; Audio.play("click"); renderUI(); break; }

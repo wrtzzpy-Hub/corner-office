@@ -6,10 +6,13 @@ Play it online at **https://wrtzzpy-hub.github.io/corner-office/**, or download 
 
 ## How it plays
 
-- **Career ladder:** Intern → Analyst → Associate → Senior Associate → Manager → Senior Manager → Director → Partner. Each engagement's score becomes XP.
-- **Engagements:** every engagement is a new client, with its own company, industry, executive, logo wall and office colour scheme. Tasks are spread around the building: a meeting room, a finance floor, an executive suite with skyline views, a lobby and a stockroom.
+- **Career ladder:** Intern → Analyst → Associate → Senior Associate → Manager → Senior Manager → Director → Partner. Each engagement's score becomes XP. Enough XP earns a **promotion interview**: one question on professional behaviour plus two skill questions at the new level, with 2 out of 3 needed to pass.
+- **Your firm:** between jobs you can walk around Haddad & Partners HQ. Your workspace grows with your rank, from the interns' hot desk to your own desk with a nameplate, a private office with promotion certificates and a trophy shelf, and finally the corner office. About ten coworkers sit at desks, walk the corridors and chat in the café, and their greetings get more respectful as you rise.
+- **Streaks, badges and a profile:** a daily streak adds up to +25% XP, 16 badges unlock as you play, and players choose a name and colour that appear on nameplates, greetings and promotion letters.
+- **Surprise events:** most jobs include one optional bonus: an urgent phone call with a 30-second question, a lost item to find and return to reception, or a coffee run from the café.
+- **Engagements:** every engagement is a new client, with its own company, industry, executive, logo wall and office colour scheme. Tasks are spread around the building: a meeting room, a finance floor, an executive suite with skyline views, a private office, a corner office, a café, a lobby and a stockroom.
 - **Two modes:**
-  - *Play for fun*: a mode simple enough for kids. 18 everyday question types (giving change, profit, sale prices, saving up, needs and wants, checking a receipt, good customer service), written in plain words with small numbers. Answers are multiple choice with two tries and a free hint. Questions get gently harder in three levels as you climb (Easy, Medium, Tricky: bigger numbers, two-step questions and trickier wrong answers), and jobs grow from 4 to 7 tasks.
+  - *Play for fun*: a mode simple enough for kids. 40 everyday question types written in plain words with small numbers. Answers are multiple choice with two tries and a free hint. Each of the three levels (Easy, Medium, Tricky) unlocks new kinds of question as well as bigger numbers: Easy covers change, splitting a bill, recipes, opening hours and honesty at work; Medium adds UAE VAT, tips, markup, breaking even, picking a supplier and spotting scam emails; Tricky adds currency exchange, percentage growth, averages, advert value, shift cover and profit margins. Jobs grow from 4 to 7 tasks.
   - *Student mode*: pick a major (Accounting, Finance, Marketing, Management or Economics) and a university year (1 to 4). About 70% of tasks come from the chosen major, answers are typed, and difficulty scales with year and rank.
 - **Learning from mistakes:** a wrong answer shows your answer next to the correct one, a numbered step-by-step solution, the key idea to remember, and a button to practise a similar question with fresh numbers.
 - **Guidance:** an on-screen arrow, a glowing path on the floor, a light beam over the destination and a minimap route lead the player to the nearest open task. A first-day coach walks new players through the controls.
@@ -33,5 +36,5 @@ Play it online at **https://wrtzzpy-hub.github.io/corner-office/**, or download 
 ## Project structure
 
 - `index.html`: the whole game in one file (this is what GitHub Pages serves).
-- `src/`: the readable source, split by part: question templates (`tasks.js`, `fun.js`), career and engagement logic (`career.js`), the WebGL engine and office (`engine.js`), sound (`audio.js`), movement and guidance (`play.js`), the calculator (`calc.js`) and the screens (`views.js`).
+- `src/`: the readable source, split by part: question templates (`tasks.js`, `fun.js`, `fun2.js`), career and engagement logic (`career.js`), interviews, streaks and badges (`progress.js`), the WebGL engine and office (`engine.js`), sound (`audio.js`), movement, guidance and coworkers (`play.js`), surprise events (`events.js`), the calculator (`calc.js`) and the screens (`views.js`).
 - `build.sh`: joins the files in `src/` back into `index.html`.
