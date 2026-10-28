@@ -450,6 +450,7 @@ function orderCoffee(c) {
 }
 function openTask(key) { state.task = key; state.sel = null; state.picks = new Set(); state.cls = {}; state.msg = ""; state.hintOpen = false; state.mentor = ""; pcOpened(taskByKey(key)); openUI("task"); }
 function openUI(ui) {
+  if (ui === "task") document.querySelectorAll(".toast:not(.badge-toast)").forEach(t => t.remove());
   state.ui = ui; if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) {} }
   for (const k in keys) keys[k] = false; joy = null; stick.hidden = true;
   renderUI(); updatePrompt(); ov.scrollTop = 0;
